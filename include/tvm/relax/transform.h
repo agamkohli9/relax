@@ -180,6 +180,12 @@ TVM_DLL Pass RemoveUnusedFunctions(Array<runtime::String> entry_functions);
 TVM_DLL Pass RunCodegen(Optional<Array<runtime::String>> target_codegens,
                         Array<runtime::String> entry_functions);
 
+/*!
+ * \brief Apply FlashAttention
+ * \return The Pass.
+ */
+TVM_DLL Pass FlashAttention(Array<runtime::String> entry_functions);
+
 }  // namespace transform
 }  // namespace relax
 }  // namespace tvm

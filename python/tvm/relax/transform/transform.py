@@ -337,6 +337,17 @@ def MetaScheduleTuneIRMod(
     return _ffi_api.MetaScheduleTuneIRMod(params, work_dir, max_trials_global)  # type: ignore
 
 
+def FlashAttention() -> tvm.ir.transform.Pass:
+    """Apply FlashAttention as described
+    in https://github.com/HazyResearch/flash-attention
+
+    Returns
+    -------
+    ret: tvm.ir.transform.Pass
+    """
+    return _ffi_api.FlashAttention()  # type: ignore
+
+
 def _wrap_class_function_pass(pass_cls, pass_info):
     """Wrap a python class as function pass."""
 
