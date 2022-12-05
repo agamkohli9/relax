@@ -19,8 +19,10 @@
 
 /*!
  * \file relax/analysis/well_formed.cc
- * \brief Check if the IRModule is well formed. If it's malformed, messages
- *    will be logged as Warning. This pass will check:
+ * \brief Check if the IRModule is well-formed.
+ * This pass is supposed to be applied to normalized Relax AST.
+ * If it's malformed, messages will be logged as Warning.
+ * This pass will check:
  *    1. GlobalVars are defined before use.
  *    2. Vars are defined before use.
  *    3. Vars are defined exactly once.
@@ -31,13 +33,26 @@
  *    6. SeqExpr only serves as function body, or in the true and
  *       false branches in IfNode.
  *    7. The IR is in ANF:
- *       (a) No nested call
- *       (b) The fields of the Tuple can only be Var/DataflowVar/Constant/
- *           ShapeExpr/RuntimeDepShape/Tuple
+ *       (a) Expressions cannot contain nested complex expressions.
+ *           Here are the expressions that may be nested inside other expressions:
+ *           Var, DataflowVar, GlobalVar, Constant, ShapeExpr, RuntimeDepShape,
+ *           Op, Tuple (we call these "leaf" expressions).
+ *       (b) The right-hand side of a binding may contain a non-leaf expression
+ *           (where all expressions nested in it are leaf expressions),
+ *           other than SeqExprs (see rule 6)
+ *       (c) Exceptions: The body of a Function node and the true branch
+ *           and false branch of If nodes *must* be SeqExprs.
+ *       (d) Places where non-leaf expressions cannot appear:
+ *           * The tuple_value field of TupleGetItem nodes
+ *           * The cond field of If nodes
+ *           * The op or args fields of Call nodes
+ *           * Inside the fields of Tuple nodes
+ *    8. Expr always has checked_type_ (with the exception of Op).
  */
 #include <tvm/relax/analysis.h>
 #include <tvm/relax/expr.h>
 #include <tvm/relax/expr_functor.h>
+#include <tvm/relax/utils.h>
 #include <tvm/tir/expr_functor.h>
 
 #include <unordered_set>
@@ -74,6 +89,14 @@ class WellFormedChecker : public relax::ExprVisitor {
     LOG(WARNING) << "This IR is not well formed: " << diag->message;
   }
 
+  void VisitExpr(const Expr& expr) override {
+    if (!expr.as<OpNode>() && !expr->checked_type_.defined()) {
+      Malformed(Diagnostic::Error(expr->span)
+                << "The checked_type_ of Expr " << expr << " is nullptr.");
+    }
+    ExprVisitor::VisitExpr(expr);
+  }
+
   void RegisterGlobalVar(GlobalVar var) { global_var_set_.insert(var); }
 
  private:
@@ -83,13 +106,20 @@ class WellFormedChecker : public relax::ExprVisitor {
       Malformed(Diagnostic::Error(var->span)
                 << "GlobalVar " << op->name_hint << " is not defined.");
     }
+
+    if (op->checked_type_.defined()) {
+      if ((!op->checked_type_->IsInstance<FuncTypeNode>()) &&
+          (!op->checked_type_->IsInstance<PackedFuncTypeNode>())) {
+        Malformed(Diagnostic::Error(var->span) << "The checked_type_ of GlobalVar " << op->name_hint
+                                               << " must be either FuncType or PackedFuncType.");
+      }
+    }
   }
 
   void VisitExpr_(const TupleNode* op) {
     for (size_t i = 0; i < op->fields.size(); i++) {
       Expr expr = op->fields[i];
-      if (expr.as<VarNode>() || expr.as<DataflowVarNode>() || expr.as<ShapeExprNode>() ||
-          expr.as<RuntimeDepShapeNode>() || expr.as<ConstantNode>() || expr.as<TupleNode>()) {
+      if (IsLeafExpr(expr)) {
         this->VisitExpr(expr);
       } else {
         Malformed(Diagnostic::Error(expr->span)
@@ -99,6 +129,15 @@ class WellFormedChecker : public relax::ExprVisitor {
 
     if (op->shape_) {
       this->VisitExpr(Downcast<Expr>(op->shape_.value()));
+    }
+  }
+
+  void VisitExpr_(const TupleGetItemNode* op) {
+    if (IsLeafExpr(op->tuple)) {
+      this->VisitExpr(op->tuple);
+    } else {
+      Malformed(Diagnostic::Error(op->span)
+                << "The tuple value in a TupleGetItem node must be a leaf expression.");
     }
   }
 
@@ -143,17 +182,24 @@ class WellFormedChecker : public relax::ExprVisitor {
 
       this->VisitVarDef(param);
     }
-    this->VisitBody(op->body);
+    if (auto seq = op->body.as<SeqExprNode>()) {
+      this->VisitSeqExpr(seq);
+    } else {
+      Malformed(Diagnostic::Error(op->span) << "Function bodies must be sequence expressions");
+    }
     var_set_ = previous_var_set_;
     prim_expr_visitor_.symbolic_var_set_.clear();
   }
 
   void VisitExpr_(const CallNode* op) {
+    if (IsLeafExpr(op->op)) {
+      this->VisitExpr(op->op);
+    } else {
+      Malformed(Diagnostic::Error(op->span) << "The called expression must be a leaf expression");
+    }
     for (size_t i = 0; i < op->args.size(); i++) {
       Expr arg = op->args[i];
-      if (arg.as<GlobalVarNode>() || arg.as<ExternFuncNode>() || arg.as<TupleNode>() ||
-          arg.as<ShapeExprNode>() || arg.as<VarNode>() || arg.as<DataflowVarNode>() ||
-          arg.as<ConstantNode>()) {
+      if (IsLeafExpr(arg)) {
         this->VisitExpr(arg);
       } else {
         Malformed(Diagnostic::Error(arg->span)
@@ -167,16 +213,27 @@ class WellFormedChecker : public relax::ExprVisitor {
   }
 
   void VisitExpr_(const IfNode* op) {
-    this->VisitExpr(op->cond);
-    std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> previous_var_set_ = var_set_;
-    std::unordered_set<tir::Var, ObjectPtrHash, ObjectPtrEqual> previous_symbolic_var_set_ =
-        prim_expr_visitor_.symbolic_var_set_;
-    this->VisitBody(op->true_branch);
-    var_set_ = previous_var_set_;
-    prim_expr_visitor_.symbolic_var_set_ = previous_symbolic_var_set_;
-    this->VisitBody(op->false_branch);
-    var_set_ = previous_var_set_;
-    prim_expr_visitor_.symbolic_var_set_ = previous_symbolic_var_set_;
+    if (IsLeafExpr(op->cond)) {
+      this->VisitExpr(op->cond);
+    } else {
+      Malformed(Diagnostic::Error(op->span)
+                << "The condition for an if node must be a leaf expression.");
+    }
+    auto true_seq = op->true_branch.as<SeqExprNode>();
+    auto false_seq = op->false_branch.as<SeqExprNode>();
+    if (true_seq && false_seq) {
+      std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> previous_var_set_ = var_set_;
+      std::unordered_set<tir::Var, ObjectPtrHash, ObjectPtrEqual> previous_symbolic_var_set_ =
+          prim_expr_visitor_.symbolic_var_set_;
+      this->VisitSeqExpr(true_seq);
+      var_set_ = previous_var_set_;
+      prim_expr_visitor_.symbolic_var_set_ = previous_symbolic_var_set_;
+      this->VisitSeqExpr(false_seq);
+      var_set_ = previous_var_set_;
+      prim_expr_visitor_.symbolic_var_set_ = previous_symbolic_var_set_;
+    } else {
+      Malformed(Diagnostic::Error(op->span) << "If node branches must be seq exprs");
+    }
   }
 
   void VisitExpr_(const ShapeExprNode* op) {
@@ -202,15 +259,10 @@ class WellFormedChecker : public relax::ExprVisitor {
     for (BindingBlock block : op->blocks) {
       this->VisitBindingBlock(block);
     }
-    this->VisitExpr(op->body);
-  }
-
-  void VisitBody(const Expr& expr) {
-    if (const SeqExprNode* seq_expr = expr.as<SeqExprNode>()) {
-      this->VisitSeqExpr(seq_expr);
-    } else {
-      this->VisitExpr(expr);
+    if (!IsLeafExpr(op->body)) {
+      Malformed(Diagnostic::Error(op->span) << "SeqExpr bodies must be leaf expressions.");
     }
+    this->VisitExpr(op->body);
   }
 
   void VisitBinding_(const VarBindingNode* binding) {

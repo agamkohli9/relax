@@ -382,16 +382,17 @@ def basic_check(expr, visitor_str, mutator_str):
 
     # check no overloading case
     basic_mutator = BasicMutator()
-    if isinstance(expr, relax.Expr):
+    # skip normalize GlobalVar since it requires context IRModule to get the checked_type_
+    if isinstance(expr, relax.Expr) and not isinstance(expr, relax.GlobalVar):
         expr = bb.normalize(expr)
-    assert_structural_equal(visit(basic_mutator, expr), expr)
+        assert_structural_equal(visit(basic_mutator, expr), expr)
 
     # check the output log and return value
     post_log_mutator = ASTPostPrinterMutator()
-    if isinstance(expr, relax.Expr):
+    if isinstance(expr, relax.Expr) and not isinstance(expr, relax.GlobalVar):
         expr = bb.normalize(expr)
-    assert_structural_equal(visit(post_log_mutator, expr), expr)
-    assert str(post_log_mutator.log) == mutator_str
+        assert_structural_equal(visit(post_log_mutator, expr), expr)
+        assert str(post_log_mutator.log) == mutator_str
 
 
 def test_constant():
@@ -463,7 +464,7 @@ def test_if():
     basic_check(
         if_node,
         "\n".join(["If", "\tVar", "\tVar", "\tVar"]),
-        "\n".join(["Var", "Var", "Var", "If"]),
+        "\n".join(["Var", "Var", "SeqExpr", "Var", "SeqExpr", "If"]),
     )
 
 
@@ -564,7 +565,7 @@ def test_function():
     bindings = [relax.VarBinding(x, relax.const(1))]
     blocks = [relax.BindingBlock(bindings)]
     seq_expr = relax.SeqExpr(blocks, x)
-    ret_type = relax.DynTensorType(-1, "float32")
+    ret_type = relax.DynTensorType(1, "float32")
     ret_shape = relax.RuntimeDepShape()
     func = relax.Function([x], seq_expr, ret_type, ret_shape)
     basic_check(

@@ -21,6 +21,7 @@ import tvm
 from tvm import tir
 from tvm import relax as rx
 from tvm.relax.testing import dump_ast
+from tvm.relax.testing.ast_printer import ASTPrinter
 from tvm.script import tir as T, relax as R
 
 import numpy as np
@@ -89,16 +90,16 @@ def test_dataflow_var() -> None:
 
 def test_match_shape() -> None:
     # match_shape([16, 8], [m, n])
-    m = tir.Var("m", dtype="int32")
-    n = tir.Var("n", dtype="int32")
+    m = tir.Var("m", dtype="int64")
+    n = tir.Var("n", dtype="int64")
     shape = rx.const([16, 8], "int32")
     var = rx.Var("v0", type_annotation=rx.ShapeType())
     b0 = rx.MatchShape(shape, [m, n], var)
     b0_str = dump_ast(b0)
     assert b0_str.startswith("MatchShape(")
     assert "Constant" in b0_str
-    assert "PrimExpr(value=`m: int32`)" in b0_str
-    assert "PrimExpr(value=`n: int32`)" in b0_str
+    assert "PrimExpr(value=`m: int64`)" in b0_str
+    assert "PrimExpr(value=`n: int64`)" in b0_str
     assert "16" in b0_str
     assert "8" in b0_str
     assert b0_str != dump_ast(b0, include_type_annotations=False)
@@ -114,8 +115,8 @@ def test_match_shape() -> None:
     b1 = rx.MatchShape(value, [m, n], var)
     b1_str = dump_ast(b1)
     assert b1_str.startswith("MatchShape(")
-    assert "PrimExpr(value=`m: int32`)" in b1_str
-    assert "PrimExpr(value=`n: int32`)" in b1_str
+    assert "PrimExpr(value=`m: int64`)" in b1_str
+    assert "PrimExpr(value=`n: int64`)" in b1_str
     assert b1_str != dump_ast(b1, include_type_annotations=False, include_shape_annotations=False)
 
 
@@ -249,8 +250,8 @@ def test_shape_of():
     s1_str = dump_ast(s1)
     assert s1_str.startswith("ShapeExpr("), s1_str
     assert "values=" in s1_str
-    assert "PrimExpr(value=`96`)" in s1_str
-    assert "PrimExpr(value=`54`)" in s1_str
+    assert "PrimExpr(value=`96i64`)" in s1_str
+    assert "PrimExpr(value=`54i64`)" in s1_str
 
 
 def test_shape_expr():
@@ -258,8 +259,42 @@ def test_shape_expr():
     shape_expr_str = dump_ast(shape_expr)
     assert shape_expr_str.startswith("ShapeExpr(")
     assert "values" in shape_expr_str
-    assert "PrimExpr(value=`10`)" in shape_expr_str
-    assert "PrimExpr(value=`20`)" in shape_expr_str
+    assert "PrimExpr(value=`10i64`)" in shape_expr_str
+    assert "PrimExpr(value=`20i64`)" in shape_expr_str
+
+
+def test_types():
+    printer = ASTPrinter()
+    shape_type = rx.ShapeType()
+    assert strip_whitespace(printer.visit_type_(shape_type)) == "ShapeType()"
+    object_type = rx.ObjectType()
+    assert strip_whitespace(printer.visit_type_(object_type)) == "ObjectType()"
+    packed_type = rx.PackedFuncType()
+    assert strip_whitespace(printer.visit_type_(packed_type)) == "PackedFuncType()"
+    tensor_type = rx.DynTensorType(ndim=2, dtype="int32")
+    assert strip_whitespace(printer.visit_type_(tensor_type)) == "DynTensorType(ndim=2,dtype=int32)"
+    unit_type = rx.TupleType([])
+    assert strip_whitespace(printer.visit_type_(unit_type)) == "TupleType(fields=[])"
+    tuple_type = rx.TupleType([shape_type, object_type])
+    assert strip_whitespace(printer.visit_type_(tuple_type)) == strip_whitespace(
+        """
+        TupleType(
+            fields=[
+                ShapeType(),
+                ObjectType()
+            ]
+        )
+        """
+    )
+    func_type = rx.FuncType([tensor_type], unit_type)
+    assert strip_whitespace(printer.visit_type_(func_type)) == strip_whitespace(
+        """
+        FuncType(
+            arg_types=[DynTensorType(ndim=2,dtype=int32)],
+            ret_type=TupleType(fields=[])
+        )
+        """
+    )
 
 
 def test_call_packed():
@@ -422,7 +457,7 @@ def test_print_type_annotation_non_var():
 
     body = normalize(f).body
     assert isinstance(body, rx.SeqExpr)
-    call = body.body
+    call = body.blocks[-1].bindings[-1].value
     assert isinstance(call, rx.Call)
     arg = call.args[0]
     arg_str = strip_whitespace(dump_ast(arg))
@@ -433,6 +468,38 @@ def test_print_type_annotation_non_var():
     # we expect the shape_of call to have a checked_type_ of ShapeType
     type_str = "checked_type_=ShapeType()"
     assert type_str in call_str
+
+
+def test_if():
+    @R.function
+    def f(cond: R.Tensor((), dtype="bool")) -> R.Tensor((), dtype="int32"):
+        if cond:
+            x = R.const(1)
+        else:
+            x = R.const(2)
+        return x
+
+    body = normalize(f).body
+    assert isinstance(body, rx.SeqExpr)
+    body_str = strip_whitespace(dump_ast(body))
+    # we expect both branches to be seq exprs
+    assert "If" in body_str
+    assert "true_branch=SeqExpr(" in body_str
+    assert "false_branch=SeqExpr(" in body_str
+
+
+def test_tuple_get_item():
+    @R.function
+    def f(x: R.Tuple(R.Tensor((), dtype="int32"))) -> R.Tensor((), dtype="int32"):
+        return x[0]
+
+    body = normalize(f).body
+    assert isinstance(body, rx.SeqExpr)
+    body_str = strip_whitespace(dump_ast(body))
+
+    assert "TupleGetItem" in body_str
+    assert 'tuple_value=Var(name_hint="x"' in body_str
+    assert "index=0" in body_str
 
 
 if __name__ == "__main__":

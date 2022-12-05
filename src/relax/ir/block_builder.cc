@@ -26,6 +26,8 @@
 #include <tvm/relax/expr_functor.h>
 #include <tvm/relax/op_attr_types.h>
 #include <tvm/relax/type.h>
+#include <tvm/relax/type_analysis.h>
+#include <tvm/relax/utils.h>
 #include <tvm/relay/op.h>
 #include <tvm/tir/function.h>
 
@@ -34,8 +36,8 @@ namespace relax {
 
 // ================================
 // BlockBuilderNode::ExprNormalizer
-
-// TODO(@altanh): more test cases to cover different visits
+// Invariance:
+// After Normalize: an Expr always have checked_type (with the exception of Op).
 class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
  public:
   ExprNormalizer(BlockBuilderNode* builder) : builder_(builder) {}
@@ -43,8 +45,6 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
 #define RELAX_EXPR_NORMALIZER_LEAF(OP) \
   Expr VisitExpr_(const OP* op) final { return GetRef<Expr>(op); }
 
-  RELAX_EXPR_NORMALIZER_LEAF(VarNode);
-  RELAX_EXPR_NORMALIZER_LEAF(DataflowVarNode);
   RELAX_EXPR_NORMALIZER_LEAF(RuntimeDepShapeNode);
   RELAX_EXPR_NORMALIZER_LEAF(ExternFuncNode);
   RELAX_EXPR_NORMALIZER_LEAF(GlobalVarNode);
@@ -66,6 +66,40 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
     return ExprFunctor::VisitExpr(expr);
   }
 
+  Expr VisitExpr_(const DataflowVarNode* var) final {
+    bool shape_unchanged = true;
+    Expr new_shape;
+    if (var->shape_) {
+      new_shape = this->VisitExpr(Downcast<Expr>(var->shape_.value()));
+      shape_unchanged &= new_shape.same_as(var->shape_);
+    }
+
+    if (shape_unchanged) {
+      return GetRef<Var>(var);
+    } else {
+      Var new_var = DataflowVar(var->vid, NullOpt, var->checked_type_, var->span);
+      UpdateShape(new_var, new_shape);
+      return new_var;
+    }
+  }
+
+  Expr VisitExpr_(const VarNode* var) final {
+    bool shape_unchanged = true;
+    Expr new_shape;
+    if (var->shape_) {
+      new_shape = this->VisitExpr(Downcast<Expr>(var->shape_.value()));
+      shape_unchanged &= new_shape.same_as(var->shape_);
+    }
+
+    if (shape_unchanged) {
+      return GetRef<Var>(var);
+    } else {
+      Var new_var = Var(var->vid, NullOpt, var->checked_type_, var->span);
+      UpdateShape(new_var, new_shape);
+      return new_var;
+    }
+  }
+
   Expr VisitExpr_(const TupleNode* op) final {
     bool unchanged = true;
     Array<Expr> new_fields;
@@ -81,13 +115,11 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
       return tuple;
     }
 
-    // Tuple's shape can be null, when a tuple consists of all DynTensorType, it has a shape
-    if (!tuple->shape_) {
-      UpdateShape(tuple, GetTupleShape(tuple));
-    }
-
     // Tuple's checked_type must not be null
     if (!tuple->checked_type_.defined()) {
+      if (tuple->fields.size() == 0) {
+        UpdateType(tuple, VoidType());
+      }
       Array<Type> tuple_type;
       for (Expr field : tuple->fields) {
         ICHECK(field->checked_type_.defined())
@@ -96,6 +128,19 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
       }
       UpdateType(tuple, TupleType(tuple_type));
     }
+
+    // NOTE: Tuple's shape can be null
+    // When a tuple consists of all DynTensorType elements or nested tuple of DynTensorTypes,
+    // it has a shape.
+    if (!tuple->shape_) {
+      UpdateShape(tuple, GetTupleShape(tuple));
+    }
+
+    // recurse into its shape in case its shape also need to be normalized
+    if (tuple->shape_ && tuple->shape_.value()->IsInstance<TupleNode>()) {
+      this->VisitExpr(Downcast<Expr>(tuple->shape_.value()));
+    }
+
     return tuple;
   }
 
@@ -108,15 +153,12 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
       func = Function(op->params, new_body, op->ret_type, op->ret_shape, op->attrs);
     }
 
-    // NOTE: the shape_ of Function is left as null for now, to be consitent with
-    // Skip the deduction of function type of a function
-    // as the function type needs to be annotated in certain cases(mutual function call)
-    // TODO(tvm-team) deduce function's type in construction time.
+    // NOTE: the shape_ of Function is left as null for now
     return func;
   }
 
   Expr VisitExpr_(const CallNode* op) final {
-    Expr new_op = this->VisitExpr(op->op);
+    Expr new_op = this->Bind(op->op);
     bool unchanged = new_op.same_as(op->op);
 
     Array<Expr> new_args;
@@ -136,8 +178,16 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
     }
 
     // only do shape/type inference if the Call does not have shape/type
-    if (call->shape_ && call->checked_type_.defined()) {
+    if (call->shape_.defined() && call->checked_type_.defined()) {
       return call;
+    }
+
+    // Update the type prior to updating the shape, since the shape inference may need the updated
+    // type in cases of Call for ExternFunc.
+    if (!call->checked_type_.defined()) {
+      // type inference
+      auto inferred_type = InferType(call, this->builder_->diag_ctx_, this->builder_->context_mod_);
+      UpdateType(call, inferred_type);
     }
 
     if (!call->shape_) {
@@ -149,11 +199,7 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
       }
     }
 
-    if (!call->checked_type_.defined()) {
-      // type inference
-      auto inferred_type = InferType(call, this->builder_->diag_ctx_, this->builder_->context_mod_);
-      UpdateType(call, inferred_type);
-    }
+    CheckShapeTypeConsistency(call->shape_, call->checked_type_);
     return call;
   }
 
@@ -168,7 +214,8 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
     }
 
     builder_->BeginBindingBlock();
-    Expr new_body = this->VisitExpr(op->body);
+    // the body may not be a leaf expression, so check for that
+    Expr new_body = this->Bind(op->body);
     unchanged &= new_body.same_as(op->body);
     BindingBlock prologue = builder_->EndBlock();
 
@@ -182,8 +229,9 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
     SeqExpr seq_expr;
     if (unchanged) {
       seq_expr = GetRef<SeqExpr>(op);
+    } else {
+      seq_expr = SeqExpr(new_blocks, new_body);
     }
-    seq_expr = SeqExpr(new_blocks, new_body);
 
     // only do shape/type inference if the SeqExpr does not have shape/type
     if (seq_expr->shape_ && seq_expr->checked_type_.defined()) {
@@ -226,19 +274,39 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
   }
 
   Expr VisitExpr_(const IfNode* op) final {
-    Expr new_cond = this->VisitExpr(op->cond);
+    Expr new_cond = this->Bind(op->cond);
     Expr new_true = this->VisitWithNewScope(op->true_branch);
     Expr new_false = this->VisitWithNewScope(op->false_branch);
+
+    If if_node;
     if (new_cond.same_as(op->cond) && new_true.same_as(op->true_branch) &&
         new_false.same_as(op->false_branch)) {
-      return GetRef<Expr>(op);
+      if_node = GetRef<If>(op);
+    } else {
+      if_node = If(new_cond, new_true, new_false);
     }
-    // TODO(relax-team): fix type/shape deduction for if node.
-    return If(new_cond, new_true, new_false);
+
+    if (!op->checked_type_.defined()) {
+      ICHECK(new_true->checked_type_.defined() && new_false->checked_type_.defined())
+          << "The checked_type_ of true and false branches must not be nullptr.";
+      UpdateType(if_node, FindLCA(new_true->checked_type_, new_false->checked_type_));
+    }
+
+    if (!op->shape_.defined()) {
+      if (new_true->shape_ && new_false->shape_ &&
+          builder_->CanProveShapeEqual(Downcast<Expr>(new_true->shape_.value()),
+                                       Downcast<Expr>(new_false->shape_.value()))) {
+        UpdateShape(if_node, new_true->shape_);
+      } else {
+        UpdateShape(if_node, RuntimeDepShape());
+      }
+    }
+
+    return if_node;
   }
 
   Expr VisitExpr_(const TupleGetItemNode* op) final {
-    Expr new_tuple = this->VisitExpr(op->tuple);
+    Expr new_tuple = this->Bind(op->tuple);
     TupleGetItem node;
     if (new_tuple.same_as(op->tuple)) {
       node = GetRef<TupleGetItem>(op);
@@ -324,6 +392,8 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
     return new_block;
   }
 
+  void ResetMemo() { expr_memo_.Reset(); }
+
  private:
   /*!
    * \brief Memoization map for expressions using Id for equality of variables.
@@ -353,6 +423,11 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
       }
     }
 
+    void Reset() {
+      var_memo_ = std::unordered_map<Id, Expr, ObjectPtrHash, ObjectPtrEqual>();
+      expr_memo_ = std::unordered_map<Expr, Expr, ObjectPtrHash, ObjectPtrEqual>();
+    }
+
    private:
     std::unordered_map<Id, Expr, ObjectPtrHash, ObjectPtrEqual> var_memo_;
     std::unordered_map<Expr, Expr, ObjectPtrHash, ObjectPtrEqual> expr_memo_;
@@ -374,8 +449,30 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
   // Helper function to infer the shape of a Call.
   Optional<Expr> InferShape(const Call& call, DiagnosticContext diag_ctx, IRModule ctx_mod) {
     if (call->op.as<ExternFuncNode>()) {
-      // call_packed: return RuntimeDepShape
-      return RuntimeDepShape();
+      std::function<Expr(const Type&)> f_create_type = [&f_create_type](const Type& type) -> Expr {
+        if (!type.defined() || type->IsInstance<ShapeTypeNode>() ||
+            type->IsInstance<FuncTypeNode>() || type->IsInstance<ObjectTypeNode>()) {
+          return Expr();
+        }
+        if (const auto* tuple_type = type.as<TupleTypeNode>()) {
+          if (tuple_type->fields.size() == 0) {
+            // VoidType (i.e. empty TupleType) does not have shape
+            return Expr();
+          }
+          Array<Expr> fields;
+          fields.reserve(tuple_type->fields.size());
+          for (const Type& field_type : tuple_type->fields) {
+            fields.push_back(f_create_type(field_type));
+          }
+          return Tuple(fields);
+        } else if (type->IsInstance<DynTensorTypeNode>()) {
+          return RuntimeDepShape();
+        } else {
+          LOG(FATAL) << "Unsupported relax type: " << type->GetTypeKey();
+          throw;
+        }
+      };
+      return f_create_type(call->checked_type_);
     } else if (call->op.as<OpNode>()) {
       // primitive op: look up FInferShape attribute
       Op op = Downcast<Op>(call->op);
@@ -433,20 +530,8 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
 
   // Helper function to infer the type of a Call.
   Type InferType(const Call& call, DiagnosticContext diag_ctx, IRModule ctx_mod) {
-    // call_packed: return type_args of the call node
-    // TODO(@yuchen): add type annotation for ExternFuncNode
-    if (call->op.as<ExternFuncNode>()) {
-      if (call->type_args.defined()) {
-        if (call->type_args.size() == 0) {
-          return ObjectType();
-        } else if (call->type_args.size() == 1) {
-          return call->type_args.front();
-        } else {
-          return TupleType(call->type_args);
-        }
-      }
-    } else if (call->op.as<OpNode>()) {
-      // primitive op: look up FInferType attribute
+    if (call->op.as<OpNode>()) {
+      // Case 1: the op field is a primitive op, look up FInferType attribute
       Op op = Downcast<Op>(call->op);
       if (op_map_infer_type_.count(op)) {
         return op_map_infer_type_[op](call, diag_ctx);
@@ -454,34 +539,90 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
         LOG(FATAL) << "ValueError: Cannot find the FInferType attribute registered to op: "
                    << op->name;
       }
-    } else if (const auto* gv = call->op.as<GlobalVarNode>()) {
-      // global function: find the function's checked_type_
-      auto it_func = ctx_mod->functions.find(GetRef<GlobalVar>(gv));
-      if (it_func != ctx_mod->functions.end()) {
-        if (const auto* func = (*it_func).second.as<FunctionNode>()) {
-          return func->ret_type;
+    } else {
+      // Case 2: the op field is of callable type
+      ICHECK(call->op->checked_type_.defined())
+          << "When the op field is not an OpNode, the CallNode's op must have checked_type_.";
+      if (call->op->checked_type_.as<PackedFuncTypeNode>()) {
+        if (call->type_args.defined()) {
+          if (call->type_args.size() == 0) {
+            return ObjectType();
+          } else if (call->type_args.size() == 1) {
+            return call->type_args.front();
+          } else {
+            return TupleType(call->type_args);
+          }
+        } else {
+          LOG(FATAL) << "ExternFunc call must have type args.";
         }
-        // TODO(@yuchen): add this check after normalization in parser
-        // else {
-        //   LOG(FATAL) << "ValueError: Cannot find function " << gv->name_hint
-        //              << " in the context IRModule.";
-        // }
-      }
-    } else if (auto* var = call->op.as<VarNode>()) {
-      // TODO(@yongwww, yuchen): handle the infer with more specific cases
-      Optional<Expr> val = builder_->LookupBinding(GetRef<Var>(var));
-      if (const auto* func_node = val.value().as<FunctionNode>()) {
+      } else if (auto* func_node = call->op->checked_type_.as<FuncTypeNode>()) {
         return func_node->ret_type;
       }
-      if (auto* ft_node = var->checked_type_.as<FuncTypeNode>()) {
-        return ft_node->ret_type;
+    }
+    LOG(FATAL) << "ValueError: the CallNode's op has to be either an OpNode, or has "
+               << " Callable (i.e., PackedFuncType or FuncType) as its checked_type_";
+    throw;
+  }
+
+  // Helper function to check if the provided shape and type is consistent.
+  // Throw internal exceptions if they are not consistent.
+  void CheckShapeTypeConsistency(const Optional<ObjectRef>& opt_shape, const Type& type) {
+    if (!type.defined() || type->IsInstance<ShapeTypeNode>() || type->IsInstance<FuncTypeNode>() ||
+        type->IsInstance<ObjectTypeNode>()) {
+      ICHECK(!opt_shape.defined())
+          << "When the type of an Expr is undefined/ShapeType/FuncType/ObjectType, the shape of "
+             "this Expr is expected to be undefined. However, the actual shape is defined and is "
+          << opt_shape.value();
+    } else if (const auto* dyn_tensor_type = type.as<DynTensorTypeNode>()) {
+      // `opt_shape` should either be a relax::Expr or undefined.
+      if (opt_shape.defined()) {
+        const auto* shape = opt_shape.as<ExprNode>();
+        ICHECK(shape != nullptr) << "The shape of an Expr, if defined, is expected to be a Relax "
+                                    "Expr. However, the actual shape is not a Relax Expr and is "
+                                 << opt_shape.value()->GetTypeKey();
+        ICHECK(shape->checked_type()->IsInstance<ShapeTypeNode>())
+            << "The shape of an Expr, if defined, is expected to be a Relax Expr which has type "
+               "ShapeType. However, the actual shape has type "
+            << shape->checked_type()->GetTypeKey();
+      }
+
+      const auto* shape_expr = opt_shape.as<ShapeExprNode>();
+      if (dyn_tensor_type->IsUnknownNdim()) {
+        ICHECK(shape_expr == nullptr)
+            << "When the type of an Expr is DynTensorType with unknown ndim, the shape of the Expr "
+               "is expected not to be a ShapeExpr. However, the actual shape is ShapeExpr "
+            << GetRef<ShapeExpr>(shape_expr);
+      } else if (shape_expr != nullptr) {
+        ICHECK(dyn_tensor_type->ndim == static_cast<int>(shape_expr->values.size()))
+            << "When the type of an Expr is DynTensorType with known ndim and the shape of that "
+               "Expr is a ShapeExpr, the ShapeExpr should have as many values as the ndim "
+               "indicates. However, the actual Expr type has ndim "
+            << dyn_tensor_type->ndim << " while the actual Expr shape is "
+            << GetRef<ShapeExpr>(shape_expr) << ", which has length " << shape_expr->values.size();
+      }
+    } else if (const auto* tuple_type = type.as<TupleTypeNode>()) {
+      const auto* tuple_shape = opt_shape.as<TupleNode>();
+      if (tuple_shape == nullptr) {
+        ICHECK(tuple_type->fields.size() == 0)
+            << "When the type of an Expr is TupleType and the shape of that Expr is not a Tuple, "
+               "it means that the type should be a VoidType, which is represented as an empty "
+               "TupleType. However, here the shape is not a tuple while the type has "
+            << tuple_type->fields.size() << " field(s).";
+      } else {
+        ICHECK_EQ(tuple_shape->fields.size(), tuple_type->fields.size())
+            << "When the type of an Expr is TupleType and the shape of that Expr is a Tuple, the "
+               "two should have the same number of fields. However, the type has "
+            << tuple_type->fields.size() << " field(s) while the shape has "
+            << tuple_shape->fields.size() << " field(s)";
+        int n_field = tuple_shape->fields.size();
+        // Recursively check the consistency.
+        for (int i = 0; i < n_field; ++i) {
+          CheckShapeTypeConsistency(tuple_shape->fields[i], tuple_type->fields[i]);
+        }
       }
     } else {
-      // TODO(@yuchen): call to local var/function support
-      LOG(FATAL) << "ValueError: Failed to do type inference for " << call->op->GetTypeKey();
+      LOG(FATAL) << "Unsupported relax type: " << type->GetTypeKey();
     }
-
-    return Type();
   }
 
   // Helper function to get the shape of a Tuple based on its fields
@@ -500,27 +641,27 @@ class BlockBuilderNode::ExprNormalizer : public ExprFunctor<Expr(const Expr&)> {
     return NullOpt;
   }
 
-  static bool IsLeaf(const Expr& expr) {
-    // NB: tuples are treated as leaf nodes for ergonomics
-    // TODO(@altanh, @yuchen): remove TupleNode from leaf
-    return expr.as<VarNode>() || expr.as<GlobalVarNode>() || expr.as<ConstantNode>() ||
-           expr.as<ShapeExprNode>() || expr.as<RuntimeDepShapeNode>() ||
-           expr.as<ExternFuncNode>() || expr.as<OpNode>() || expr.as<TupleNode>();
-  }
-
   Expr VisitWithNewScope(const Expr& expr) {
     builder_->BeginBindingBlock();
     Expr post = this->VisitExpr(expr);
     BindingBlock prologue = builder_->EndBlock();
-    if (!prologue->bindings.empty()) {
-      post = SeqExpr({prologue}, post);
+    // "New scopes" (function bodies, if/else clauses) must be wrapped in seq exprs.
+    // Don't wrap if it's already a seq and there are no bindings to add
+    if (post.as<SeqExprNode>() && prologue->bindings.empty()) {
+      return post;
     }
-    return post;
+    Array<BindingBlock> bindings;
+    if (!prologue->bindings.empty()) {
+      bindings.push_back(prologue);
+    }
+    auto seq = SeqExpr(bindings, post);
+    // visit in case post is not a leaf and we need to bind it too
+    return this->VisitExpr(seq);
   }
 
   Expr Bind(const Expr& expr) {
     Expr post = this->VisitExpr(expr);
-    if (!IsLeaf(post)) {
+    if (!IsLeafExpr(post)) {
       post = builder_->Emit(post);
       expr_memo_.Set(expr, post);
     }
@@ -640,11 +781,6 @@ Var BlockBuilderNode::EmitMatchShape(const MatchShape& binding) {
     binding_table_[binding->var->vid] = binding->value;
   }
   cur_frame->bindings.push_back(binding);
-  // TODO(@altanh, @yuchen): what value should we bind? Consider
-  //    y = add(x, x)
-  //    z = match_shape(y, (n, m))
-  // We would like pass writers to match "z" with the "add" node but with extra shape info.
-  // Maybe this logic could be deferred to a DFPattern-style rewriter?
   return binding->var;
 }
 
@@ -677,9 +813,11 @@ bool BlockBuilderNode::CanProveShapeEqual(const Expr& lhs, const Expr& rhs) {
   if (lhs == rhs) {
     return true;
   }
-  const auto* lhs_shape = lhs.as<ShapeExprNode>();
-  const auto* rhs_shape = rhs.as<ShapeExprNode>();
-  if (lhs_shape && rhs_shape) {
+  if (lhs->IsInstance<RuntimeDepShapeNode>() && rhs->IsInstance<RuntimeDepShapeNode>()) {
+    return true;
+  } else if (lhs->IsInstance<ShapeExprNode>() && rhs->IsInstance<ShapeExprNode>()) {
+    const auto* lhs_shape = lhs.as<ShapeExprNode>();
+    const auto* rhs_shape = rhs.as<ShapeExprNode>();
     size_t lhs_ndim = lhs_shape->values.size();
     size_t rhs_ndim = rhs_shape->values.size();
     if (lhs_ndim != rhs_ndim) {
@@ -694,14 +832,35 @@ bool BlockBuilderNode::CanProveShapeEqual(const Expr& lhs, const Expr& rhs) {
       }
     }
     return true;
+  } else if (lhs->IsInstance<TupleNode>() && rhs->IsInstance<TupleNode>()) {
+    const auto* lhs_tuple = lhs.as<TupleNode>();
+    const auto* rhs_tuple = rhs.as<TupleNode>();
+    if (lhs_tuple->fields.size() != rhs_tuple->fields.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < lhs_tuple->fields.size(); ++i) {
+      if (!CanProveShapeEqual(lhs_tuple->fields[i], rhs_tuple->fields[i])) {
+        return false;
+      }
+    }
+    return true;
   }
   return false;
 }
 
+void BlockBuilderNode::ResetMemo() { normalizer_->ResetMemo(); }
+
 // TODO(@altanh, @yuchen): need an internal Emit_ that doesn't call normalize
 Expr BlockBuilderNode::Normalize(const Expr& expr) {
-  // TODO(@altanh): fast path
   Expr normalized = normalizer_->VisitExpr(expr);
+
+  if (!normalized->IsInstance<OpNode>()) {
+    ICHECK(normalized->checked_type_.defined())
+        << "The checked_type_ of an Expr except OpNode after "
+           "normalization must not be nullptr. However, this Expr does not have checked_type_: "
+        << normalized;
+  }
+
   return normalized;
 }
 
@@ -717,12 +876,21 @@ GlobalVar BlockBuilderNode::AddFunction(const BaseFunc& func, const String& func
   if (it == func_map_.end()) {
     context_mod_.CopyOnWrite();
     String func_name = name_table_->GetUniqueName(func_name_hint);
+    while (context_mod_->ContainGlobalVar(func_name)) {
+      func_name = name_table_->GetUniqueName(func_name_hint);
+    }
     GlobalVar gvar = GlobalVar(func_name);
     if (const tir::PrimFuncNode* prim_func = func.as<tir::PrimFuncNode>()) {
       tir::PrimFunc fn = GetRef<tir::PrimFunc>(prim_func);
       fn = WithAttr(std::move(fn), "global_symbol", func_name);
+      ICHECK(fn->checked_type_.defined())
+          << "The function to be added does not have checked_type_.";
+      gvar->checked_type_ = fn->checked_type_;
       context_mod_->Add(gvar, fn);
     } else {
+      ICHECK(func->checked_type_.defined())
+          << "The function to be added does not have checked_type_.";
+      gvar->checked_type_ = func->checked_type_;
       context_mod_->Add(gvar, func);
     }
     func_map_.emplace(func, gvar);

@@ -41,8 +41,8 @@ def var_name_set(vars: List[Union[rx.Var, rx.GlobalVar]]) -> Set[str]:
 
 
 def test_dispatch_var():
-    m = tir.Var("m", "int32")
-    n = tir.Var("n", "int32")
+    m = tir.Var("m", "int64")
+    n = tir.Var("n", "int64")
     type_anno0 = rx.DynTensorType(ndim=2, dtype="float16")
     type_anno1 = rx.DynTensorType(ndim=1, dtype="float16")
     v0 = rx.Var("v0", [m, n], type_anno0)
@@ -60,8 +60,8 @@ def test_dispatch_var():
 
 
 def test_post_order_visit():
-    m = tir.Var("m", "int32")
-    n = tir.Var("n", "int32")
+    m = tir.Var("m", "int64")
+    n = tir.Var("n", "int64")
     type_anno0 = rx.DynTensorType(ndim=2, dtype="float16")
     type_anno1 = rx.DynTensorType(ndim=1, dtype="float16")
     x = rx.Var("x", [m, n], type_anno0)
@@ -87,8 +87,8 @@ def test_post_order_visit():
 
 
 def test_use_def():
-    m = tir.Var("m", "int32")
-    n = tir.Var("n", "int32")
+    m = tir.Var("m", "int64")
+    n = tir.Var("n", "int64")
     type_anno0 = rx.DynTensorType(ndim=2, dtype="float16")
     type_anno1 = rx.DynTensorType(ndim=1, dtype="float16")
     x = rx.Var("x", [m, n], type_anno0)
@@ -304,6 +304,7 @@ def test_derive_func_ret_shape_free():
 class VarExample:
     @R.function
     def func(a: R.Tensor) -> R.Tensor:
+        # normalized into assigning R.add(a, a) to a var and returning it
         return R.add(a, a)
 
     @R.function
@@ -322,8 +323,10 @@ class VarExample:
 
 def test_all_vars():
     vars = all_vars(VarExample["func"])
-    assert len(vars) == 1
+    assert len(vars) == 2
     assert vars[0].name_hint == "a"
+    # the body of the seq expr in the func body is a var
+    assert vars[1] == VarExample["func"].body.body
 
     var_names = var_name_set(all_vars(VarExample["main"]))
     assert var_names == {"x", "y", "z", "p", "q", "r", "s"}
@@ -331,8 +334,10 @@ def test_all_vars():
 
 def test_bound_vars():
     vars = bound_vars(VarExample["func"])
-    assert len(vars) == 1
+    assert len(vars) == 2
     assert vars[0].name_hint == "a"
+    # the body of the seq expr in the func body is a bound var
+    assert vars[1] == VarExample["func"].body.body
 
     # all the vars are bound
     var_names = var_name_set(bound_vars(VarExample["main"]))
@@ -342,8 +347,10 @@ def test_bound_vars():
     body_names = var_name_set(bound_vars(VarExample["main"].body))
     assert body_names == {"z", "p", "q", "r", "s"}
 
-    # if the argument isn't bound, then nothing is
-    assert len(bound_vars(VarExample["func"].body)) == 0
+    # only binding is in the (normalized) body
+    simple_body_vars = bound_vars(VarExample["func"].body)
+    assert len(simple_body_vars) == 1
+    assert simple_body_vars[0] == VarExample["func"].body.body
 
 
 def test_free_vars():

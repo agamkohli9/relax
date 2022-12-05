@@ -226,6 +226,11 @@ def test_if():
     assert y.name_hint == "y"
 
     assert isinstance(ite, relax.If)
+    assert ite.checked_type == relax.DynTensorType(1, "float32")
+    check_shape(ite.shape, (1,))
+    assert y.checked_type == relax.DynTensorType(1, "float32")
+    check_shape(y.shape, (1,))
+
     assert isinstance(ite.true_branch, relax.SeqExpr)
     assert isinstance(ite.false_branch, relax.SeqExpr)
 
@@ -233,40 +238,26 @@ def test_if():
     body = ite.true_branch.body
     assert w_bind.var.name_hint == "w"
     check_call(w_bind.value, "relax.add", [x, x])
-    check_call(body, "relax.multiply", [w_bind.var, w_bind.var])
+    body_bind = ite.true_branch.blocks[1].bindings[0]
+    check_call(body_bind.value, "relax.multiply", [w_bind.var, w_bind.var])
+    assert ite.true_branch.body == body_bind.var
 
     w_bind = ite.false_branch.blocks[0].bindings[0]
     body = ite.false_branch.body
     assert w_bind.var.name_hint == "w"
     check_call(w_bind.value, "relax.multiply", [x, x])
-    check_call(body, "relax.add", [w_bind.var, w_bind.var])
+    body_bind = ite.false_branch.blocks[1].bindings[0]
+    check_call(body_bind.value, "relax.add", [w_bind.var, w_bind.var])
+    assert ite.false_branch.body == body_bind.var
 
 
-# TODO: figure out if-else binding type and shape
-
-
-def test_var_redefine_fail():
+def test_func_type_annotation_fail():
     with pytest.raises(tvm.error.DiagnosticError):
 
         @R.function
         def f(x, y):
             z = R.add(x, y)
             y = z
-            return y
-
-
-def test_var_redefine_fail_if():
-    with pytest.raises(tvm.error.DiagnosticError):
-
-        @R.function
-        def f(cond: R.Tensor((), "bool"), x: R.Tensor((1,), "float32")):
-            y = x
-            if cond:
-                w = R.add(x, x)
-                y = R.multiply(w, w)
-            else:
-                w = R.multiply(x, x)
-                y = R.add(w, w)
             return y
 
 
@@ -324,8 +315,7 @@ def test_tuple():
         isinstance(annot.fields[1], relax.ty.DynTensorType) and annot.fields[1].dtype == "float32"
     )
 
-    assert t.shape_ is None
-
+    assert isinstance(t.shape_, relax.Tuple)
     assert isinstance(tup, relax.Tuple)
     assert_structural_equal(tup.fields, [x, y])
 
@@ -757,13 +747,6 @@ def test_class_irmodule():
             return gv2
 
         @R.function
-        def h(
-            x: R.Tensor(("n", "n")), y: R.Tensor(("n", "n")), z: R.Tensor(("n", "n"))
-        ) -> R.Tensor:
-            _ = my_matmul(x, y, z)
-            return z
-
-        @R.function
         def k(x: R.Tensor((32, 32), "float32"), w: R.Tensor((32, 32), "float32")) -> R.Tensor:
             gv0 = R.call_packed("test.vm.mul", x, w, type_args=(R.Tensor(ndim=2, dtype="float32")))
             return gv0
@@ -786,9 +769,15 @@ def test_class_irmodule():
     func_j = my_module[var_j]
     func_k = my_module[var_k]
 
-    assert len(func_f.body.blocks) == 0
-    assert func_f.body.body.op == var_g
-    assert func_g.body.body.args[0] == var_my_matmul
+    assert len(func_f.body.blocks) == 1
+    assert len(func_f.body.blocks[0].bindings) == 1
+    f_call_var = func_f.body.blocks[0].bindings[0].var
+    assert func_f.body.blocks[0].bindings[0].value.op == var_g
+    assert func_f.body.body == f_call_var
+
+    g_call_var = func_g.body.blocks[0].bindings[-1].var
+    assert func_g.body.blocks[0].bindings[-1].value.args[0] == var_my_matmul
+    assert func_g.body.body == g_call_var
 
     gv_bind = func_j.body.blocks[0].bindings[0]
     assert gv_bind.value.checked_type.ndim == 2
@@ -863,6 +852,28 @@ def test_class_normalize():
             return R.multiply(gv, gv1)
 
     assert_structural_equal(InputModule, OutputModule)
+
+
+def test_memory_op():
+    @R.function
+    def memory(x: R.Tensor) -> R.Tensor:
+        storage = R.memory.alloc_storage((1024,), -1, "global", "float32")
+        alloca = R.memory.alloc_tensor(storage, (1, 256), 0, "float32")
+        _ = R.memory.kill_tensor(alloca)
+        _ = R.memory.kill_storage(storage)
+        return alloca
+
+    b0, b1, b2, b3 = memory.body.blocks[0].bindings
+    assert b0.value.op.name == "relax.memory.alloc_storage"
+    assert isinstance(b0.value.args[0], relax.ShapeExpr)
+    check_shape(b0.value.args[0], (1024,))
+    assert isinstance(b0.value.attrs, relax.op.MemAllocStorageAttrs)
+
+    assert b1.value.op.name == "relax.memory.alloc_tensor"
+    assert isinstance(b1.value.attrs, relax.op.MemAllocTensorAttrs)
+
+    assert b2.value.op.name == "relax.memory.kill_tensor"
+    assert b3.value.op.name == "relax.memory.kill_storage"
 
 
 if __name__ == "__main__":
