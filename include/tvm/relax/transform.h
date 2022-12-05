@@ -184,7 +184,7 @@ TVM_DLL Pass RunCodegen(Optional<Array<runtime::String>> target_codegens,
  * \brief Apply FlashAttention
  * \return The Pass.
  */
-TVM_DLL Pass FlashAttention(Array<runtime::String> entry_functions);
+TVM_DLL Pass FlashAttention();
 
 }  // namespace transform
 }  // namespace relax

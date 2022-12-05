@@ -30,21 +30,21 @@ namespace relax {
   */ 
 class FlashAttentionizer : public ExprMutator {
  public:
-  explicit FlashAttentionizer() {}
+  FlashAttentionizer() {}
 
  private:
    
-  using ExprMutator::VisitExpr_;
+  // using ExprMutator::VisitExpr_;
 
-  Expr VisitExpr_(const DataflowVarNode* op) final {
-    /** TODO: */
-    return ExprMutator::VisitExpr_(op);
-  }
+  // Expr VisitExpr_(const DataflowVarNode* op) final {
+  //   /** TODO: */
+  //   return ExprMutator::VisitExpr_(op);
+  // }
 
-  Expr VisitExpr_(const VarNode* op) final {
-    /** TODO: */
-    return ExprMutator::VisitExpr_(op);
-  }
+  // Expr VisitExpr_(const VarNode* op) final {
+  //   /** TODO: */
+  //   return ExprMutator::VisitExpr_(op);
+  // }
 };
 
 Expr FlashAttention(const Expr& e) { return FlashAttentionizer().VisitExpr(e); }
@@ -56,7 +56,7 @@ Pass FlashAttention() {
       [=](Function f, IRModule m, PassContext pc) {
         return Downcast<Function>(FlashAttention(f));
       };
-  return CreateFunctionPass(pass_func, 0, "FlashAttention", {});
+  return CreateFunctionPass(pass_func, 1, "FlashAttention", {});
 }
 
 TVM_REGISTER_GLOBAL("relax.transform.FlashAttention").set_body_typed(FlashAttention);
