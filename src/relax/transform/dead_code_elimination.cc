@@ -25,12 +25,11 @@ namespace tvm {
 namespace relax {
 
 /*!
-  * \brief Pattern match Matmul -> Dropout -> Softmax -> Mask -> Matmul kernels
-  into fused FlashAttention kernel
+  * \brief TODO
   */
-class FlashAttentionizer : public ExprMutator {
+class DeadCodeEliminator : public ExprMutator {
  public:
-  FlashAttentionizer() {}
+  DeadCodeEliminator() {}
 
  private:
    
@@ -42,19 +41,19 @@ class FlashAttentionizer : public ExprMutator {
   }
 };
 
-Expr FlashAttention(const Expr& e) { return FlashAttentionizer().VisitExpr(e); }
+Expr DeadCodeElimination(const Expr& e) { return DeadCodeEliminator().VisitExpr(e); }
 
 namespace transform {
 
-Pass FlashAttention() {
+Pass DeadCodeElimination() {
   runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(FlashAttention(f));
+        return Downcast<Function>(DeadCodeElimination(f));
       };
-  return CreateFunctionPass(pass_func, 1, "FlashAttention", {});
+  return CreateFunctionPass(pass_func, 1, "DeadCodeElimination", {});
 }
 
-TVM_REGISTER_GLOBAL("relax.transform.FlashAttention").set_body_typed(FlashAttention);
+TVM_REGISTER_GLOBAL("relax.transform.DeadCodeElimination").set_body_typed(DeadCodeElimination);
 
 }  // namespace transform
 

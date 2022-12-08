@@ -337,15 +337,21 @@ def MetaScheduleTuneIRMod(
     return _ffi_api.MetaScheduleTuneIRMod(params, work_dir, max_trials_global)  # type: ignore
 
 
-def FlashAttention() -> tvm.ir.transform.Pass:
-    """Apply FlashAttention as described
-    in https://github.com/HazyResearch/flash-attention
+def DeadCodeElimination(inline_once=False, ignore_impurity=False):
+    """Remove expressions that do not have any users (dead code).
+
+    Parameters
+    ----------
+    inline_once: Optional[Bool]
+        Whether to inline a binding that is referenced exactly once.
+    ignore_impurity: Optional[Bool]
+        Whether to ignore possible side-effects in let-bound expressions.
 
     Returns
     -------
-    ret: tvm.ir.transform.Pass
+    ret: tvm.transform.Pass
     """
-    return _ffi_api.FlashAttention()  # type: ignore
+    return _ffi_api.DeadCodeElimination(inline_once, ignore_impurity) # type: ignore
 
 
 def _wrap_class_function_pass(pass_cls, pass_info):
