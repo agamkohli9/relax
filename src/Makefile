@@ -5056,6 +5056,30 @@ relax/transform/canonicalize_bindings.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/canonicalize_bindings.cc.s
 .PHONY : relax/transform/canonicalize_bindings.cc.s
 
+relax/transform/dead_code_elimination.o: relax/transform/dead_code_elimination.cc.o
+.PHONY : relax/transform/dead_code_elimination.o
+
+# target to build an object file
+relax/transform/dead_code_elimination.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/dead_code_elimination.cc.o
+.PHONY : relax/transform/dead_code_elimination.cc.o
+
+relax/transform/dead_code_elimination.i: relax/transform/dead_code_elimination.cc.i
+.PHONY : relax/transform/dead_code_elimination.i
+
+# target to preprocess a source file
+relax/transform/dead_code_elimination.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/dead_code_elimination.cc.i
+.PHONY : relax/transform/dead_code_elimination.cc.i
+
+relax/transform/dead_code_elimination.s: relax/transform/dead_code_elimination.cc.s
+.PHONY : relax/transform/dead_code_elimination.s
+
+# target to generate assembly for a file
+relax/transform/dead_code_elimination.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/dead_code_elimination.cc.s
+.PHONY : relax/transform/dead_code_elimination.cc.s
+
 relax/transform/fail_test_rewrite.o: relax/transform/fail_test_rewrite.cc.o
 .PHONY : relax/transform/fail_test_rewrite.o
 
@@ -5079,30 +5103,6 @@ relax/transform/fail_test_rewrite.s: relax/transform/fail_test_rewrite.cc.s
 relax/transform/fail_test_rewrite.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/fail_test_rewrite.cc.s
 .PHONY : relax/transform/fail_test_rewrite.cc.s
-
-relax/transform/flash_attention.o: relax/transform/flash_attention.cc.o
-.PHONY : relax/transform/flash_attention.o
-
-# target to build an object file
-relax/transform/flash_attention.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/flash_attention.cc.o
-.PHONY : relax/transform/flash_attention.cc.o
-
-relax/transform/flash_attention.i: relax/transform/flash_attention.cc.i
-.PHONY : relax/transform/flash_attention.i
-
-# target to preprocess a source file
-relax/transform/flash_attention.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/flash_attention.cc.i
-.PHONY : relax/transform/flash_attention.cc.i
-
-relax/transform/flash_attention.s: relax/transform/flash_attention.cc.s
-.PHONY : relax/transform/flash_attention.s
-
-# target to generate assembly for a file
-relax/transform/flash_attention.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/tvm_objs.dir/build.make CMakeFiles/tvm_objs.dir/relax/transform/flash_attention.cc.s
-.PHONY : relax/transform/flash_attention.cc.s
 
 relax/transform/fma_rewrite.o: relax/transform/fma_rewrite.cc.o
 .PHONY : relax/transform/fma_rewrite.o
@@ -19337,12 +19337,12 @@ help:
 	@echo "... relax/transform/canonicalize_bindings.o"
 	@echo "... relax/transform/canonicalize_bindings.i"
 	@echo "... relax/transform/canonicalize_bindings.s"
+	@echo "... relax/transform/dead_code_elimination.o"
+	@echo "... relax/transform/dead_code_elimination.i"
+	@echo "... relax/transform/dead_code_elimination.s"
 	@echo "... relax/transform/fail_test_rewrite.o"
 	@echo "... relax/transform/fail_test_rewrite.i"
 	@echo "... relax/transform/fail_test_rewrite.s"
-	@echo "... relax/transform/flash_attention.o"
-	@echo "... relax/transform/flash_attention.i"
-	@echo "... relax/transform/flash_attention.s"
 	@echo "... relax/transform/fma_rewrite.o"
 	@echo "... relax/transform/fma_rewrite.i"
 	@echo "... relax/transform/fma_rewrite.s"

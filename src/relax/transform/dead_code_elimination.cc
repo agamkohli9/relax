@@ -35,8 +35,10 @@ class DeadCodeEliminator : public ExprMutator {
    
   using ExprMutator::VisitExpr_;
 
-  Expr VisitExpr_(const DataflowVarNode* op) final {
-    /** TODO: */
+  Expr VisitExpr_(const VarNode* op) final {
+    /** 
+     * TODO: Eliminate Dead Vars
+    */
     return ExprMutator::VisitExpr_(op);
   }
 };
