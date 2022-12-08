@@ -1,0 +1,5 @@
+if(EXISTS "/home/agamserver/eecs583/relax/src/cpptest[1]_tests.cmake")
+  include("/home/agamserver/eecs583/relax/src/cpptest[1]_tests.cmake")
+else()
+  add_test(cpptest_NOT_BUILT cpptest_NOT_BUILT)
+endif()

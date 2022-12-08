@@ -27,24 +27,19 @@ namespace relax {
 /*!
   * \brief Pattern match Matmul -> Dropout -> Softmax -> Mask -> Matmul kernels
   into fused FlashAttention kernel
-  */ 
+  */
 class FlashAttentionizer : public ExprMutator {
  public:
   FlashAttentionizer() {}
 
  private:
    
-  // using ExprMutator::VisitExpr_;
+  using ExprMutator::VisitExpr_;
 
-  // Expr VisitExpr_(const DataflowVarNode* op) final {
-  //   /** TODO: */
-  //   return ExprMutator::VisitExpr_(op);
-  // }
-
-  // Expr VisitExpr_(const VarNode* op) final {
-  //   /** TODO: */
-  //   return ExprMutator::VisitExpr_(op);
-  // }
+  Expr VisitExpr_(const DataflowVarNode* op) final {
+    /** TODO: */
+    return ExprMutator::VisitExpr_(op);
+  }
 };
 
 Expr FlashAttention(const Expr& e) { return FlashAttentionizer().VisitExpr(e); }

@@ -1,0 +1,1 @@
+cmd='/home/agamserver/eecs583/relax/cmake/libs/../../3rdparty/libbacktrace/configure;--prefix=/home/agamserver/eecs583/relax/src/libbacktrace;--with-pic;CC=/usr/bin/cc;CFLAGS=-O2 -Wall -fPIC ;LDFLAGS=;CPP=/usr/bin/cc -E;NM=/usr/bin/nm;STRIP=/usr/bin/strip;--host='
