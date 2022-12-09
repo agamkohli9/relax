@@ -7,9 +7,9 @@ from tvm.script.parser.relax.entry import Tensor
 class SmallModel:
     @R.function
     def main(x: Tensor, y: Tensor):
-            a = 12
-            b = 3
+            a = R.const(12)
+            b = R.const(12)
             c = R.add(b, b)
-            d = R.add(b, b)
+            d = R.add(b, b) # = c
             e = R.add(c, d)
             return e
