@@ -7,11 +7,9 @@ from tvm.script.parser.relax.entry import Tensor
 class SmallModel:
     @R.function
     def main(x: Tensor, y: Tensor):
-        with R.dataflow():
-            a = x
-            b = y
-            c = relax.add(a, b)
-            d = relax.add(a, b)
-            e = relax.add(c, d)
-            R.output(e)
-        return e
+            a = 12
+            b = 3
+            c = R.add(b, b)
+            d = R.add(b, b)
+            e = R.add(c, d)
+            return e

@@ -24,9 +24,27 @@
 namespace tvm {
 namespace relax {
 
-/*!
-  * \brief TODO
-  */
+class Tracer : ExprVisitor {
+  public:
+    Tracer(IRModule mod_) : mod(mod_) {}
+
+    void VisitExpr(const Expr &expr) final {
+      // Stop visiting var that's already been visited at least twice
+      std::cout << "Visiting: " << PrettyPrint(expr);
+      if (++visit_counter[expr.get()] <= 2) {
+        VisitExpr(expr);
+      }
+    }
+
+    void VisitExpr_(const VarNode* var) final {
+      std::cout << "Check var: " << var->name_hint();
+    }
+
+  private:
+    IRModule mod;
+    std::unordered_map<const Object*, size_t> visit_counter;
+};
+
 class DeadCodeEliminator : public ExprMutator {
  public:
   DeadCodeEliminator() {}
@@ -35,11 +53,9 @@ class DeadCodeEliminator : public ExprMutator {
    
   using ExprMutator::VisitExpr_;
 
-  Expr VisitExpr_(const VarNode* op) final {
-    /** 
-     * TODO: Eliminate Dead Vars
-    */
-    return ExprMutator::VisitExpr_(op);
+  Expr VisitExpr_(const Expr &expr) {
+    printf("debug\n");
+    return expr;
   }
 };
 
@@ -48,11 +64,24 @@ Expr DeadCodeElimination(const Expr& e) { return DeadCodeEliminator().VisitExpr(
 namespace transform {
 
 Pass DeadCodeElimination() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(DeadCodeElimination(f));
-      };
-  return CreateFunctionPass(pass_func, 1, "DeadCodeElimination", {});
+  const tvm::runtime::TypedPackedFunc<tvm::IRModule (tvm::IRModule, tvm::transform::PassContext)> pass_func = 
+  [=](IRModule mod, PassContext pc) {
+    IRModule result({}, mod->type_definitions, mod->Imports(), mod->source_map, mod->attrs);
+    DeadCodeEliminator dce;
+
+    for (const auto& kv : mod->functions) {
+      // Count uses of variable
+      Tracer tracer(mod);
+      tracer.VisitExpr(kv.second);
+
+      // Eliminate dead code
+      result->Add(kv.first, Downcast<Function>(dce.VisitExpr(kv.second)));
+    }
+
+    return result;
+  };
+
+  return tvm::transform::CreateModulePass(pass_func, 1, "DeadCodeElimination", {});
 }
 
 TVM_REGISTER_GLOBAL("relax.transform.DeadCodeElimination").set_body_typed(DeadCodeElimination);
