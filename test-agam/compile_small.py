@@ -8,7 +8,7 @@ if __name__ == '__main__':
     with open('small.relax', 'w') as f:
         print(SmallModel, file=f)
 
-    optimized_mod = relax.transform.DeadCodeElimination()(SmallModel)
+    optimized_mod = relax.transform.CommonSubexpressionElimination()(SmallModel)
 
     with open('small.optimized.relax', 'w') as f:
         print(optimized_mod, file=f)

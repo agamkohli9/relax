@@ -188,10 +188,10 @@ TVM_DLL Pass RunCodegen(Optional<Array<runtime::String>> target_codegens,
                         Array<runtime::String> entry_functions);
 
 /*!
- * \brief Apply FlashAttention
+ * \brief Apply Common Subexpresion Elimination
  * \return The Pass.
  */
-TVM_DLL Pass FlashAttention();
+TVM_DLL Pass CommonSubexpresionElimination();
 
 }  // namespace transform
 }  // namespace relax
