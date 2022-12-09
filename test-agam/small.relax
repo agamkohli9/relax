@@ -1,0 +1,11 @@
+@R.function
+def foo(x: R.Tensor(None, ndim=-1), y: R.Tensor(None, ndim=-1)) -> R.Tensor(None, dtype="int32", ndim=0):
+    # block 0
+    a: R.Tensor((), dtype="int32") = 12
+    b: R.Tensor((), dtype="int32") = 3
+    c: R.Tensor((), dtype="int32") = R.add(b, b)
+    d: R.Tensor((), dtype="int32") = R.add(b, b)
+    e: R.Tensor((), dtype="int32") = R.add(c, d)
+    return e
+    
+
