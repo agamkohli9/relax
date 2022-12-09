@@ -1,16 +1,13 @@
 @R.function
-def main(x: R.Tensor(None, ndim=-1)) -> R.Tensor(None, dtype="int32", ndim=0):
+def main(x: R.Tensor(None, ndim=-1), y: R.Tensor(None, ndim=-1)) -> R.Tensor(None, ndim=-1):
     # function attr dict
     R.func_attr({"global_symbol": "main"})
     # block 0
-    with R.dataflow():
-        y: R.Tensor((), dtype="int32") = 1
-        z: R.Tensor((), dtype="int32") = y
-        o: R.Tensor((), dtype="int32") = z
-        p: R.Tensor((), dtype="int32") = o
-        m: R.Tensor((), dtype="int32") = p
-        n: R.Tensor((), dtype="int32") = m
-        R.output(n)
-    return n
+    a: R.Tensor(None, ndim=-1) = x
+    b: R.Tensor(None, ndim=-1) = y
+    c: R.Tensor(None, ndim=-1) = R.add(a, b)
+    d: R.Tensor(None, ndim=-1) = R.add(a, b)
+    e: R.Tensor(None, ndim=-1) = R.add(c, d)
+    return e
     
 

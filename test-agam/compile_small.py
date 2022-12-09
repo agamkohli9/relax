@@ -4,16 +4,26 @@ import tvm
 from tvm import relax, relay
 from small import SmallModel
 
-if __name__ == '__main__':
-    # Load model as Relax IR
-    #mod = SmallModel()
+OUTPUT_RAW = "small"
+OUTPUT_OPT = "small.optimized"
 
-    with open('small.relax', 'w') as f:
-        print(SmallModel, file=f)
+def save_model(model, name: str):
+    filename = f"{name}.relax"
+    print(f"saving {filename}")
+    with open(filename, "w") as f:
+        print(model, file=f)
 
-    # Do some dummy optimization pass
+
+def compile():
+    # Save original model
+    save_model(SmallModel, OUTPUT_RAW)
+
+    # Common subexpression elimination
     mod = relay.transform.EliminateCommonSubexpr()(SmallModel)
-    #mod = relax.transform.FlashAttention()(mod)
 
-    with open('small.optimized.relax', 'w') as f:
-        print(mod, file=f)
+    # Save optimized model
+    save_model(mod, OUTPUT_OPT)
+
+
+if __name__ == '__main__':
+    compile()
