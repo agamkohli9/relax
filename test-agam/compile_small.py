@@ -19,10 +19,10 @@ def compile():
     save_model(SmallModel, OUTPUT_RAW)
 
     # Common subexpression elimination
-    mod = relay.transform.EliminateCommonSubexpr()(SmallModel)
+    optimized_mod = relax.transform.CommonSubexpressionElimination()(SmallModel)
 
     # Save optimized model
-    save_model(mod, OUTPUT_OPT)
+    save_model(optimized_mod, OUTPUT_OPT)
 
 
 if __name__ == '__main__':

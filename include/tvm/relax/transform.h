@@ -101,6 +101,13 @@ TVM_DLL Pass ToNonDataflow();
 TVM_DLL Pass CallTIRRewrite();
 
 /*!
+ * \brief Attach global_symbol to Relax functions and TIR Primfuncs for codegen.
+ *
+ * \return The Pass.
+ */
+TVM_DLL Pass AttachGlobalSymbol();
+
+/*!
  * \brief Simplify a Relax module by folding var bindings and match shape nodes.
  * May include other forms of expression simplification in the future.
  * Best used alongside constant folding and eliminating unused bindings.
@@ -181,10 +188,10 @@ TVM_DLL Pass RunCodegen(Optional<Array<runtime::String>> target_codegens,
                         Array<runtime::String> entry_functions);
 
 /*!
- * \brief Apply FlashAttention
+ * \brief Apply Common Subexpresion Elimination
  * \return The Pass.
  */
-TVM_DLL Pass FlashAttention();
+TVM_DLL Pass CommonSubexpresionElimination();
 
 }  // namespace transform
 }  // namespace relax

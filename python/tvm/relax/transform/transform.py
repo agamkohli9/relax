@@ -122,6 +122,16 @@ def VMShapeLower() -> tvm.ir.transform.Pass:
     return _ffi_api.VMShapeLower()  # type: ignore
 
 
+def AttachGlobalSymbol() -> tvm.ir.transform.Pass:
+    """Attach global_symbol to Relax functions and TIR Primfuncs for codegen.
+
+    Returns
+    -------
+    ret: tvm.ir.transform.Pass
+    """
+    return _ffi_api.AttachGlobalSymbol()  # type: ignore
+
+
 def Normalize() -> tvm.ir.transform.Pass:
     """Transforming Relax IR to normal form, i.e., the expressions are normalized(no nesting
     and hence the AST is in ANF), and all checked_type_ and shape_ of expressions are available.
@@ -337,15 +347,14 @@ def MetaScheduleTuneIRMod(
     return _ffi_api.MetaScheduleTuneIRMod(params, work_dir, max_trials_global)  # type: ignore
 
 
-def FlashAttention() -> tvm.ir.transform.Pass:
-    """Apply FlashAttention as described
-    in https://github.com/HazyResearch/flash-attention
+def CommonSubexpressionElimination() -> tvm.ir.transform.Pass:
+    """Apply Common Subexpression Elimination
 
     Returns
     -------
     ret: tvm.ir.transform.Pass
     """
-    return _ffi_api.FlashAttention()  # type: ignore
+    return _ffi_api.CommonSubexpressionElimination()  # type: ignore
 
 
 def _wrap_class_function_pass(pass_cls, pass_info):
