@@ -23,11 +23,10 @@ if __name__ == '__main__':
     mod = relax.testing.relay_translator.from_relay(mod['main'], target)
 
     with open('model.relax', 'w') as f:
-        print(mod, file=f)
+        print(mod.script(), file=f)
 
-    # Do some dummy optimization pass
-    mod = relay.transform.FoldConstant()(mod)
-    #mod = relax.transform.FlashAttention()(mod)
+    # Do out optimization pass
+    optimized_mod = relax.transform.FoldConstant()(mod)
 
     with open('model.optimized.relax', 'w') as f:
-        print(mod, file=f)
+        print(optimized_mod.script(), file=f)
