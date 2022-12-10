@@ -26,21 +26,21 @@
  * to replace an expression with a previously appeared expression with the same input and
  * attributes.
  */
-#include <tvm/relay/analysis.h>
+#include <tvm/relax/analysis.h>
 #include <tvm/relax/expr_functor.h>
+#include <tvm/relay/expr_functor.h>
 #include <tvm/relax/transform.h>
-#include <tvm/relay/op.h>
 
 #include <unordered_map>
 
 namespace tvm {
 namespace relax {
 
-class CommonSubexprEliminator : public ExprMutator {
+class CommonSubexprEliminator : public tvm::relay::MixedModeMutator {
  public:
   explicit CommonSubexprEliminator() {}
 
-  Expr Rewrite_(const CallNode* call, const Expr& post)  {
+  Expr Rewrite_(const CallNode* call, const Expr& post) {
     static auto op_stateful = Op::GetAttrMap<bool>("TOpIsStateful");
     Expr new_expr = post;
     const CallNode* new_call = new_expr.as<CallNode>();
@@ -48,7 +48,7 @@ class CommonSubexprEliminator : public ExprMutator {
     const OpNode* op = new_call->op.as<OpNode>();
     StructuralEqual attrs_equal;
 
-    if (new_call->args.size() == 0 || op == nullptr /*|| op_stateful.get(op, false)*/) {
+    if (new_call->args.size() == 0 || op == nullptr || op_stateful.get(GetRef<Op>(op), false)) {
       return new_expr;
     }
 
@@ -76,7 +76,7 @@ class CommonSubexprEliminator : public ExprMutator {
     return new_expr;
   }
 
-  Expr Rewrite_(const TupleGetItemNode* op, const Expr& post)  {
+  Expr Rewrite_(const TupleGetItemNode* op, const Expr& post) {
     Expr new_expr = post;
     const TupleGetItemNode* new_tuple_item = new_expr.as<TupleGetItemNode>();
     ICHECK(new_tuple_item);
@@ -95,15 +95,8 @@ class CommonSubexprEliminator : public ExprMutator {
     return new_expr;
   }
 
-private:
   std::unordered_map<Expr, std::vector<Expr>, ObjectPtrHash, ObjectPtrEqual> expr_map_;
 
-  /*!
-  * \brief Check if two expressions are equal scalars.
-  * \param a The expression to be checked.
-  * \param b The expression to be checked
-  * \return Whether two expressions are equal scalars.
-  */
   inline bool IsEqualScalar(const Expr& a, const Expr& b) {
     const auto* constant_a = a.as<ConstantNode>();
     const auto* constant_b = b.as<ConstantNode>();
@@ -111,7 +104,7 @@ private:
       return false;
     }
     return tvm::StructuralEqual()(a, b);
-  }
+}
 };
 
 Expr CommonSubexpressionElimination(const Expr& expr) {
@@ -129,9 +122,11 @@ Pass CommonSubexpressionElimination() {
 }
 
 TVM_REGISTER_GLOBAL("relax.transform.CommonSubexpressionElimination")
-  .set_body_typed(CommonSubexpressionElimination);
+    .set_body_typed(CommonSubexpressionElimination);
 
 }  // namespace transform
 
-}  // namespace relax
+}  // namespace relay
 }  // namespace tvm
+
+

@@ -29,14 +29,16 @@ def small_model():
     return e
 
 if __name__ == '__main__':
-    #mod = small_relay_model()
-    mod = small_model()
+    mod = small_relay_model()
+    #mod = small_model()
 
     with open('small.relax', 'w') as f:
         print(mod, file=f)
 
-    #optimized_mod = run_opt_pass(mod, relay.transform.EliminateCommonSubexpr())
-    optimized_mod = run_opt_pass(mod, relax.transform.CommonSubexpressionElimination())
+    optimized_mod = run_opt_pass(mod, relay.transform.EliminateCommonSubexpr())
+    #optimized_mod = run_opt_pass(mod, relax.transform.CommonSubexpressionElimination())
 
     with open('small.optimized.relax', 'w') as f:
         print(optimized_mod, file=f)
+
+print('Compilation Done!')
