@@ -181,17 +181,52 @@ class ConstantFolder : public ExprMutator {
       if (!arg.as<relax::ConstantNode>()) foldable = false;
     }
 
-    // Perform basic optimizations
+    /** 
+     * Perform basic optimizations
+     * NOTE: Assumes call->args is size 2
+    */
     if (foldable) {
+      StructuralEqual se = StructuralEqual();
+      DataType dtype = DataType::Int(32);
+      Constant zero = tvm::relay::MakeConstantScalar(dtype, 0),
+               one = tvm::relay::MakeConstantScalar(dtype, 1);
+
       // c + c -> leftshift c
-      // NOTE: Assumes call->args is size 2
-      if (StructuralEqual()(call->args[0], call->args[1]) 
-            && call->op == Op::Get("relax.add")) {
-            DataType dtype = DataType::Int(32);
-            
-            static const Op& op = Op::Get("relax.left_shift");
-            return Call(op, {call->args[0], tvm::relay::MakeConstantScalar(dtype, 1)}, Attrs(), {});
-          }
+      if (se(call->args[0], call->args[1]) 
+        && call->op == Op::Get("relax.add")) {
+        
+        static const Op& op = Op::Get("relax.left_shift");
+        return Call(op, {call->args[0], one}, Attrs(), {});
+      }
+
+      // c * 0 = 0
+      for (int i = 0; i < 2; ++i) {
+        if (se(call->args[i], zero)
+          && call->op == Op::Get("relax.multiply")) {
+
+          return tvm::relay::MakeConstantScalar(dtype, 0);
+        }
+
+      }
+
+      // c * 1 = c
+      for (int i = 0; i < 2; ++i) {
+        if (se(call->args[i], one)
+          && call->op == Op::Get("relax.multiply")) {
+
+          return i == 0 ? call->args[1] : call->args[0];
+        }
+
+      }
+
+      // c + 0 = c
+      for (int i = 0; i < 2; ++i) {
+        if (se(call->args[i], zero)
+          && call->op == Op::Get("relax.add")) {
+
+          return i == 0 ? call->args[1] : call->args[0];
+        }
+      }
     }
 
     return std::move(post_call);

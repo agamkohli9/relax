@@ -4,6 +4,7 @@ import tvm
 from tvm import relay, relax
 from tvm.relax import testing
 import torch
+import numpy as np
 from model import Model
 
 if __name__ == '__main__':
@@ -22,11 +23,24 @@ if __name__ == '__main__':
     mod, _ = relay.frontend.from_pytorch(model, [('input', input_data.shape)])
     mod = relax.testing.relay_translator.from_relay(mod['main'], target)
 
+    # Write unoptimized model
     with open('model.relax', 'w') as f:
         print(mod.script(), file=f)
 
-    # Do out optimization pass
-    optimized_mod = relax.transform.FoldConstant()(mod)
+    # Do our optimization pass
+    mod = relax.transform.FoldConstant()(mod)
 
+    # Write optimized model
     with open('model.optimized.relax', 'w') as f:
-        print(optimized_mod.script(), file=f)
+        print(mod.script(), file=f)
+
+# Assert that unoptimizized and optimized models are structurally equal
+ex = relax.vm.build(mod, target)
+vm = relax.VirtualMachine(ex, device)
+
+# init parameters
+params = tvm.relax.testing.nn.init_params(mod)
+
+res = vm["main"](None, *params)
+print(res)
+print('Done!')

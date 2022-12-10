@@ -5,7 +5,7 @@ import torch.nn.functional as F
 class Model(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv = nn.Linear(2, 4)
+        self.linear = nn.Linear(2, 4)
 
     def forward(self, x):
         x = self.linear(x)
