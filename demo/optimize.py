@@ -6,8 +6,7 @@ from utils import bcolors, log
 
 OUTPUT_DIR = "output"
 MODEL_RAW = "model-raw.relax"
-MODEL_OPT_RELAY = "model-opt-relay.relax"
-MODEL_OPT_RELAX = "model-opt-relax.relax"
+MODEL_OPT_RELAX = "model-opt.relax"
 
 def run_opt_pass(expr, opt_pass):
     assert isinstance(opt_pass, tvm.transform.Pass)
@@ -15,16 +14,6 @@ def run_opt_pass(expr, opt_pass):
     mod = opt_pass(mod)
     entry = mod["main"]
     return entry if isinstance(expr, relay.Function) else entry.body
-
-
-def small_relay_model():
-    a = relay.const(69)
-    b = relay.const(69)
-    c = relay.add(a, b)
-    d = relay.add(a, b)
-    e = relay.add(c, d)
-    return e
-
 
 def small_relax_model():
     a = R.const(69)
@@ -46,13 +35,13 @@ def compile():
     print("Compiling")
 
     # Save original model for reference
-    small_model = small_relay_model()
+    small_model = small_model()
     save_model(small_model, MODEL_RAW)
 
     # Compile using relay implementation
     print("optimizing with relay")
-    small_model_opt = run_opt_pass(small_model, relay.transform.FoldConstant())
-    save_model(small_model_opt, MODEL_OPT_RELAY)
+    small_model_opt = run_opt_pass(small_model, relax.transform.FoldConstant())
+    save_model(small_model_opt, MODEL_OPT_RELAX)
 
     log("Done compiling", bcolors.OKGREEN)
 
