@@ -26,6 +26,8 @@
 #include <tvm/tir/function.h>
 #include <tvm/tir/op.h>
 
+#include "../../relay/transforms/pattern_utils.h"
+
 namespace tvm {
 namespace relax {
 
@@ -166,13 +168,32 @@ class ConstantFolder : public ExprMutator {
   using ExprMutator::VisitExpr_;
 
   Expr VisitExpr_(const CallNode* call) final {
-    // post-order mutation
     Call post_call = Downcast<Call>(VisitExprPostOrder_(call));
     static const Op& call_tir_op = Op::Get("relax.call_tir");
 
     if (call->op.same_as(call_tir_op)) {
       return VisitCallTIR(post_call);
     }
+
+    // Fold calls that have all constants as arguments
+    bool foldable = true;
+    for (auto &arg : call->args) {
+      if (!arg.as<relax::ConstantNode>()) foldable = false;
+    }
+
+    // Perform basic optimizations
+    if (foldable) {
+      // c + c -> leftshift c
+      // NOTE: Assumes call->args is size 2
+      if (StructuralEqual()(call->args[0], call->args[1]) 
+            && call->op == Op::Get("relax.add")) {
+            DataType dtype = DataType::Int(32);
+            
+            static const Op& op = Op::Get("relax.leftshift");
+            return Call(op, {call->args[0], tvm::relay::MakeConstantScalar(dtype, 1)}, Attrs(), {});
+          }
+    }
+
     return std::move(post_call);
   }
 

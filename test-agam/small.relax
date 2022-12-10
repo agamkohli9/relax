@@ -1,3 +1,11 @@
-%0 = add(69, 69);
-%1 = add(69, 69);
-add(%0, %1)
+@R.function
+def foo() -> R.Tensor(None, dtype="int32", ndim=0):
+    # block 0
+    a: R.Tensor((), dtype="int32") = 69
+    b: R.Tensor((), dtype="int32") = 69
+    c: R.Tensor((), dtype="int32") = R.add(a, b)
+    d: R.Tensor((), dtype="int32") = R.add(a, b)
+    e: R.Tensor((), dtype="int32") = R.add(c, d)
+    return e
+    
+
