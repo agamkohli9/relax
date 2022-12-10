@@ -189,7 +189,7 @@ class ConstantFolder : public ExprMutator {
             && call->op == Op::Get("relax.add")) {
             DataType dtype = DataType::Int(32);
             
-            static const Op& op = Op::Get("relax.leftshift");
+            static const Op& op = Op::Get("relax.left_shift");
             return Call(op, {call->args[0], tvm::relay::MakeConstantScalar(dtype, 1)}, Attrs(), {});
           }
     }

@@ -23,9 +23,13 @@
  */
 
 #include "binary.h"
+#include <tvm/topi/broadcast.h>
 
 namespace tvm {
 namespace relax {
+
+using FTVMCompute = runtime::TypedPackedFunc<Array<te::Tensor>(
+    const Attrs& attrs, const Array<te::Tensor>& inputs, const Type& out_type)>;
 
 RELAX_REGISTER_BINARY_BROADCAST_OP("add")
     .describe("Elementwise add with broadcasting")
@@ -34,6 +38,11 @@ RELAX_REGISTER_BINARY_BROADCAST_OP("add")
 RELAX_REGISTER_BINARY_BROADCAST_OP("multiply")
     .describe("Elementwise multiply with broadcasting")
     .set_support_level(1);
+
+RELAX_REGISTER_BINARY_BROADCAST_OP("left_shift")
+    .describe("Left Shift")
+    .set_support_level(1)
+    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::left_shift));
 
 Expr InferShapeBinaryBroadcast(const Call& call, DiagnosticContext diag_ctx) {
   if (call->args.size() != 2) {

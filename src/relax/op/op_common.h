@@ -59,6 +59,13 @@ bool EqualCheck(const PrimExpr& lhs, const PrimExpr& rhs);
       .set_attr<FInferShape>("FInferShape", InferShapeBinaryBroadcast)            \
       .set_attr<FInferType>("FInferType", InferTypeBinaryBroadcast)
 
+#define RELAX_BINARY_COMPUTE(FTOPI)                       \
+  [](const Attrs& attrs, const Array<te::Tensor>& inputs, \
+     const Type& out_type) -> Array<te::Tensor> {         \
+    ICHECK_EQ(inputs.size(), 2U);                         \
+    return {FTOPI(inputs[0], inputs[1])};                 \
+  }
+
 }  // namespace relax
 }  // namespace tvm
 
