@@ -1,7 +1,7 @@
 @R.function
 def foo() -> R.Tensor(None, dtype="int32", ndim=0):
     # block 0
-    res: R.Tensor((), dtype="int32") = R.add(69, 69)
+    res: R.Tensor((), dtype="int32") = R.left_shift(69, 1)
     return res
     
 

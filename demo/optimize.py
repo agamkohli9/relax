@@ -1,38 +1,21 @@
 import os
+
 import tvm
-from tvm import relay, relax
-from tvm.script import relax as R
+from tvm import relax, tir, topi
+from tvm.runtime import container
+from tvm.target.target import Target
+from tvm.relax.testing import nn
+
+import tvm.script
+from tvm.script import tir as T, relax as R
+
 from utils import bcolors, log
+from model import Module
 
 OUTPUT_DIR = "output"
+
 MODEL_RAW = "model-raw.relax"
-MODEL_OPT_RELAY = "model-opt-relay.relax"
-MODEL_OPT_RELAX = "model-opt-relax.relax"
-
-def run_opt_pass(expr, opt_pass):
-    assert isinstance(opt_pass, tvm.transform.Pass)
-    mod = tvm.IRModule.from_expr(expr)
-    mod = opt_pass(mod)
-    entry = mod["main"]
-    return entry if isinstance(expr, relay.Function) else entry.body
-
-
-def small_relay_model():
-    a = relay.const(69)
-    b = relay.const(69)
-    c = relay.add(a, b)
-    d = relay.add(a, b)
-    e = relay.add(c, d)
-    return e
-
-
-def small_relax_model():
-    a = R.const(69)
-    b = R.const(69)
-    c = R.add(a, b)
-    d = R.add(a, b)
-    e = R.add(c, d)
-    return e
+MODEL_OPT_RELAX = "model-opt.relax"
 
 
 def save_model(model, filename):
@@ -45,14 +28,49 @@ def save_model(model, filename):
 def compile():
     print("Compiling")
 
-    # Save original model for reference
-    small_model = small_relay_model()
-    save_model(small_model, MODEL_RAW)
+    # Save original for reference
+    mod = Module
+    save_model(mod, MODEL_RAW)
 
-    # Compile using relay implementation
-    print("optimizing with relay")
-    small_model_opt = run_opt_pass(small_model, relay.transform.FoldConstant())
-    save_model(small_model_opt, MODEL_OPT_RELAY)
+    # Save optimized
+    mod_opt = relax.transform.FoldConstant()(mod)
+    mod_opt = relax.transform.FoldConstant()(mod_opt)
+    save_model(mod_opt, MODEL_OPT_RELAX)
+
+    builder = relax.BlockBuilder()
+
+    with builder.function(name="main"):
+        model = Module
+        
+        # n is a symbolic variable to represent a dynamic batch size
+        n = tir.Var("n", "int64")
+        data = nn.Placeholder((n, input_size), name="data")
+        output = model(data)
+        params = [data] + model.parameters()
+        builder.emit_func_output(output, params=params) 
+
+
+     
+    # # Get and print the IRModule being built.
+    # mod = builder.get()
+    # mod.show()
+
+
+    # Build and create vm executor
+    log("Build and create vm executor", bcolors.OKBLUE)
+
+    target = tvm.target.Target("cuda")
+    ex = relax.vm.build(mod, target)
+    vm = relax.VirtualMachine(ex, tvm.cpu())
+
+    # Init parameters
+    log("Init parameters", bcolors.OKBLUE)
+
+    params = nn.init_params(mod)
+    print("params", params)
+
+    res = vm["main"](None, *params)
+    print(res)
 
     log("Done compiling", bcolors.OKGREEN)
 
