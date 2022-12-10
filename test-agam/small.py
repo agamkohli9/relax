@@ -7,9 +7,8 @@ from tvm.script.parser.relax.entry import Tensor
 class SmallModel:
     @R.function
     def main():
-        a = R.const(69)
-        b = R.const(69)
-        c = R.add(a, b)
-        d = R.add(a, b) # Should get removed
-        e = R.add(c, d)
-        return e
+        a = R.add(R.const(69), R.const(69))
+        a = R.multiply(R.const(69), R.const(0))
+        a = R.multiply(R.const(69), R.const(1))
+        a = R.add(R.const(69), R.const(0))
+        return a
