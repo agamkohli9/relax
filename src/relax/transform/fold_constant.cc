@@ -28,6 +28,10 @@
 
 #include "../../relay/transforms/pattern_utils.h"
 
+namespace {
+inline bool isPowerOfTwo(uint32_t x) { return x && (!(x & (x - 1))); }
+}
+
 namespace tvm {
 namespace relax {
 
@@ -175,60 +179,95 @@ class ConstantFolder : public ExprMutator {
       return VisitCallTIR(post_call);
     }
 
-    // Fold calls that have all constants as arguments
-    bool foldable = true;
+    // Folds have all constants as arguments
+    // Algebraic Identities have one tensor and one constant
+    bool foldable = true, algebraic = false;
     for (auto &arg : call->args) {
-      if (!arg.as<relax::ConstantNode>()) foldable = false;
+      if (!tvm::relay::IsConstScalar(arg)) foldable = false;
+      if (tvm::relay::IsConstScalar(arg)) algebraic = true;
     }
 
     /** 
-     * Perform basic optimizations
+     * Perform Constant Folding
      * NOTE: Assumes call->args is size 2
     */
+    DataType dtype = DataType::Int(32);
+
     if (foldable) {
-      StructuralEqual se = StructuralEqual();
-      DataType dtype = DataType::Int(32);
-      Constant zero = tvm::relay::MakeConstantScalar(dtype, 0),
-               one = tvm::relay::MakeConstantScalar(dtype, 1);
+      uint32_t arg[] = {
+        call->args[0].as<ConstantNode>()->toInt(),
+        call->args[1].as<ConstantNode>()->toInt()
+      };
 
-      // c + c -> leftshift c
-      if (se(call->args[0], call->args[1]) 
-        && call->op == Op::Get("relax.add")) {
-        
-        static const Op& op = Op::Get("relax.left_shift");
-        return Call(op, {call->args[0], one}, Attrs(), {});
+      if (call->op == Op::Get("relax.add")) {
+        return tvm::relay::MakeConstantScalar(dtype, arg[0] + arg[1]);
+      }
+      
+      if (call->op == Op::Get("relax.multiply")) {
+        return tvm::relay::MakeConstantScalar(dtype, arg[0] + arg[1]);
       }
 
-      // c * 0 = 0
-      for (int i = 0; i < 2; ++i) {
-        if (se(call->args[i], zero)
-          && call->op == Op::Get("relax.multiply")) {
-
-          return tvm::relay::MakeConstantScalar(dtype, 0);
-        }
-
+      if (call->op == Op::Get("relax.left_shift")) {
+        return tvm::relay::MakeConstantScalar(dtype, arg[0] + arg[1]);
       }
-
-      // c * 1 = c
-      for (int i = 0; i < 2; ++i) {
-        if (se(call->args[i], one)
-          && call->op == Op::Get("relax.multiply")) {
-
-          return i == 0 ? call->args[1] : call->args[0];
-        }
-
-      }
-
-      // c + 0 = c
-      for (int i = 0; i < 2; ++i) {
-        if (se(call->args[i], zero)
-          && call->op == Op::Get("relax.add")) {
-
-          return i == 0 ? call->args[1] : call->args[0];
-        }
-      }
+      
+      /** TODO: Implement other binary ops */
     }
 
+    /**
+     * Algebraic Identities 
+    */
+    if (algebraic) {
+      uint32_t constant, tensor_idx;
+      if (const ConstantNode *arg0 = call->args[0].as<ConstantNode>()) {
+        constant = arg0->toInt();
+        tensor_idx = 1;
+      } else {
+        constant = call->args[1].as<ConstantNode>()->toInt();
+        tensor_idx = 0;
+      }
+
+      // c *///& 0 = 0
+      if (constant == 0
+        && (call->op == Op::Get("relax.multiply")
+            || (call->op == Op::Get("relax.divide") && tensor_idx == 1)
+            || call->op == Op::Get("relax.and"))) {
+
+        return tvm::relay::MakeConstantScalar(dtype, 0);
+      }
+
+      // c *// 1 = c
+      if (constant == 1
+        && (call->op == Op::Get("relax.multiply")
+            || (call->op == Op::Get("relax.divide") && tensor_idx == 0))) {
+
+        return call->args[tensor_idx];
+      }
+
+      // c +/-/|/^/<</>> 0 = c
+      if (constant == 0
+        && (call->op == Op::Get("relax.add")
+            || (call->op == Op::Get("relax.subtract") && tensor_idx == 0)
+            || call->op == Op::Get("relax.or")
+            || call->op == Op::Get("relax.xor")
+            || (call->op == Op::Get("relax.left_shift") && tensor_idx == 0)
+            || (call->op == Op::Get("relax.right_shift") && tensor_idx == 0))) {
+
+        return call->args[tensor_idx];
+      }
+
+      // x * c -> leftshift x by log(c) if c is a multiple of 2
+      if (isPowerOfTwo(constant)
+        && call->op == Op::Get("relax.multiply")) {
+        
+        static const Op& op = Op::Get("relax.left_shift");
+        return Call(op, {
+            call->args[tensor_idx],
+            tvm::relay::MakeConstantScalar(dtype, std::log2(constant))
+          }, Attrs(), {}
+        );
+      }
+    }
     return std::move(post_call);
   }
 
@@ -249,6 +288,7 @@ class ConstantFolder : public ExprMutator {
     }
     return ExprMutator::VisitExpr_(op);
   }
+
 
   // the context module to lookup functions
   IRModule ctx_module_;

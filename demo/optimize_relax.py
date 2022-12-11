@@ -37,26 +37,35 @@ def compile():
     mod_opt = relax.transform.FoldConstant()(mod_opt)
     save_model(mod_opt, MODEL_OPT_RELAX)
 
-    m = tvm.IRModule.from_expr(mod)
+    builder = relax.BlockBuilder()
+
+    with builder.function(name="main"):
+        model = Module
+        output = model()
+        builder.emit_func_output(output, params=None) 
+     
+    # Get and print the IRModule being built.
+    mod = builder.get()
+    mod.show()
 
 
-    # Build and create vm executor
-    log("Build and create vm executor", bcolors.OKBLUE)
+    # # Build and create vm executor
+    # log("Build and create vm executor", bcolors.OKBLUE)
 
-    target = tvm.target.Target("cuda")
-    ex = relax.vm.build(m, target)
-    vm = relax.VirtualMachine(ex, tvm.cpu())
+    # target = tvm.target.Target("cuda")
+    # ex = relax.vm.build(mod, target)
+    # vm = relax.VirtualMachine(ex, tvm.cpu())
 
-    # Init parameters
-    log("Init parameters", bcolors.OKBLUE)
+    # # Init parameters
+    # log("Init parameters", bcolors.OKBLUE)
 
-    params = nn.init_params(m)
-    print("params", params)
+    # params = nn.init_params(mod)
+    # print("params", params)
 
-    res = vm["main"](None, *params)
-    print(res)
+    # res = vm["main"](None, *params)
+    # print(res)
 
-    log("Done compiling", bcolors.OKGREEN)
+    # log("Done compiling", bcolors.OKGREEN)
 
 
 if __name__ == '__main__':
