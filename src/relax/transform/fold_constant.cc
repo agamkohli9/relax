@@ -227,23 +227,31 @@ class ConstantFolder : public ExprMutator {
         tensor_idx = 0;
       }
 
-      // c * 0 = 0
+      // c *///& 0 = 0
       if (constant == 0
-        && call->op == Op::Get("relax.multiply")) {
+        && (call->op == Op::Get("relax.multiply")
+            || (call->op == Op::Get("relax.divide") && tensor_idx == 1)
+            || call->op == Op::Get("relax.and"))) {
 
         return tvm::relay::MakeConstantScalar(dtype, 0);
       }
 
-      // c * 1 = c
+      // c *// 1 = c
       if (constant == 1
-        && call->op == Op::Get("relax.multiply")) {
+        && (call->op == Op::Get("relax.multiply")
+            || (call->op == Op::Get("relax.divide") && tensor_idx == 0))) {
 
         return call->args[tensor_idx];
       }
 
-      // c + 0 = c
+      // c +/-/|/^/<</>> 0 = c
       if (constant == 0
-        && call->op == Op::Get("relax.add")) {
+        && (call->op == Op::Get("relax.add")
+            || (call->op == Op::Get("relax.subtract") && tensor_idx == 0)
+            || call->op == Op::Get("relax.or")
+            || call->op == Op::Get("relax.xor")
+            || (call->op == Op::Get("relax.left_shift") && tensor_idx == 0)
+            || (call->op == Op::Get("relax.right_shift") && tensor_idx == 0))) {
 
         return call->args[tensor_idx];
       }
