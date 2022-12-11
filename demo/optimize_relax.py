@@ -37,36 +37,20 @@ def compile():
     mod_opt = relax.transform.FoldConstant()(mod_opt)
     save_model(mod_opt, MODEL_OPT_RELAX)
 
-    builder = relax.BlockBuilder()
-
-    with builder.function(name="main"):
-        model = Module
-        
-        # n is a symbolic variable to represent a dynamic batch size
-        n = tir.Var("n", "int64")
-        data = nn.Placeholder((n, input_size), name="data")
-        output = model(data)
-        params = [data] + model.parameters()
-        builder.emit_func_output(output, params=params) 
-
-
-     
-    # # Get and print the IRModule being built.
-    # mod = builder.get()
-    # mod.show()
+    m = tvm.IRModule.from_expr(mod)
 
 
     # Build and create vm executor
     log("Build and create vm executor", bcolors.OKBLUE)
 
     target = tvm.target.Target("cuda")
-    ex = relax.vm.build(mod, target)
+    ex = relax.vm.build(m, target)
     vm = relax.VirtualMachine(ex, tvm.cpu())
 
     # Init parameters
     log("Init parameters", bcolors.OKBLUE)
 
-    params = nn.init_params(mod)
+    params = nn.init_params(m)
     print("params", params)
 
     res = vm["main"](None, *params)

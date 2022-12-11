@@ -5,5 +5,5 @@ from tvm.script import relax as R
 class Module:
     @R.function
     def main():
-        res = R.add(R.const(69), R.const(69))
-        return res
+        expr = R.add(R.const(69), R.const(69))
+        return tvm.IRModule.from_expr(expr)
