@@ -88,6 +88,8 @@ class ConstantNode : public ExprNode {
     v->Visit("shape_", &shape_);
   }
 
+  uint32_t toInt() const { return reinterpret_cast<uint32_t *>(data->data)[0]; }
+
   bool SEqualReduce(const ConstantNode* other, SEqualReducer equal) const {
     return equal(data, other->data);
   }

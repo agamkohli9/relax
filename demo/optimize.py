@@ -41,38 +41,31 @@ def compile():
 
     with builder.function(name="main"):
         model = Module
-        
-        # n is a symbolic variable to represent a dynamic batch size
-        n = tir.Var("n", "int64")
-        data = nn.Placeholder((n, input_size), name="data")
-        output = model(data)
-        params = [data] + model.parameters()
-        builder.emit_func_output(output, params=params) 
-
-
+        output = model()
+        builder.emit_func_output(output, params=None) 
      
-    # # Get and print the IRModule being built.
-    # mod = builder.get()
-    # mod.show()
+    # Get and print the IRModule being built.
+    mod = builder.get()
+    mod.show()
 
 
-    # Build and create vm executor
-    log("Build and create vm executor", bcolors.OKBLUE)
+    # # Build and create vm executor
+    # log("Build and create vm executor", bcolors.OKBLUE)
 
-    target = tvm.target.Target("cuda")
-    ex = relax.vm.build(mod, target)
-    vm = relax.VirtualMachine(ex, tvm.cpu())
+    # target = tvm.target.Target("cuda")
+    # ex = relax.vm.build(mod, target)
+    # vm = relax.VirtualMachine(ex, tvm.cpu())
 
-    # Init parameters
-    log("Init parameters", bcolors.OKBLUE)
+    # # Init parameters
+    # log("Init parameters", bcolors.OKBLUE)
 
-    params = nn.init_params(mod)
-    print("params", params)
+    # params = nn.init_params(mod)
+    # print("params", params)
 
-    res = vm["main"](None, *params)
-    print(res)
+    # res = vm["main"](None, *params)
+    # print(res)
 
-    log("Done compiling", bcolors.OKGREEN)
+    # log("Done compiling", bcolors.OKGREEN)
 
 
 if __name__ == '__main__':
