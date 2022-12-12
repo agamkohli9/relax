@@ -1,4 +1,5 @@
 import os
+import sys, inspect, importlib
 
 import tvm
 from tvm import relax, tir, topi
@@ -10,13 +11,15 @@ import tvm.script
 from tvm.script import tir as T, relax as R
 
 from utils import bcolors, log
-from model import Module
 
 OUTPUT_DIR = "output"
 
-MODEL_RAW = "model-raw.relax"
-MODEL_OPT_RELAX = "model-opt.relax"
-
+def get_modules():
+    mods = []
+    for name, cls in inspect.getmembers(importlib.import_module("modules")):
+        if name.startswith("Module"):
+            mods.append((name, cls))
+    return mods
 
 def save_model(model, filename):
     filepath = os.path.join(OUTPUT_DIR, filename)
@@ -25,48 +28,30 @@ def save_model(model, filename):
         print(model, file=f)
 
 
-def compile():
+def optimize_and_save_model(name, mod_in):
     print("Compiling")
 
     # Save original for reference
-    mod = Module
-    save_model(mod, MODEL_RAW)
+    mod = mod_in
+    save_model(mod, f'{name}-raw.relax')
 
-    # Save optimized
-    mod_opt = relax.transform.FoldConstant()(mod)
-    mod_opt = relax.transform.FoldConstant()(mod_opt)
-    save_model(mod_opt, MODEL_OPT_RELAX)
-
-    builder = relax.BlockBuilder()
-
-    with builder.function(name="main"):
-        model = Module
-        output = model()
-        builder.emit_func_output(output, params=None) 
-     
-    # Get and print the IRModule being built.
-    mod = builder.get()
-    mod.show()
+    # Optimize
+    mod_opt = mod
+    for _ in range(10):
+        mod_opt = relax.transform.FoldConstant()(mod_opt)
+    
+    # Save 
+    save_model(mod_opt, f'{name}-opt.relax')
+    log("Done", bcolors.OKGREEN)
 
 
-    # # Build and create vm executor
-    # log("Build and create vm executor", bcolors.OKBLUE)
+def main():
+    modules = get_modules()
 
-    # target = tvm.target.Target("cuda")
-    # ex = relax.vm.build(mod, target)
-    # vm = relax.VirtualMachine(ex, tvm.cpu())
-
-    # # Init parameters
-    # log("Init parameters", bcolors.OKBLUE)
-
-    # params = nn.init_params(mod)
-    # print("params", params)
-
-    # res = vm["main"](None, *params)
-    # print(res)
-
-    # log("Done compiling", bcolors.OKGREEN)
-
+    for mod in modules:
+        print("name:", mod[0])
+        print("mod:", mod[1 ])
+        optimize_and_save_model(mod[0], mod[1])
 
 if __name__ == '__main__':
-    compile()
+    main()
