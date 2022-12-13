@@ -10,9 +10,9 @@ from tvm.relax.testing import nn
 import tvm.script
 from tvm.script import tir as T, relax as R
 
-from utils import bcolors, log
+from logger import bcolors, log
 
-OUTPUT_DIR = "output"
+OUTPUT_DIR = "relaxir"
 
 def get_modules():
     mods = []
@@ -20,6 +20,7 @@ def get_modules():
         if name.startswith("Module"):
             mods.append((name, cls))
     return mods
+
 
 def save_model(model, filename):
     filepath = os.path.join(OUTPUT_DIR, filename)
@@ -29,7 +30,6 @@ def save_model(model, filename):
 
 
 def optimize_and_save_model(name, mod_in):
-    print("Compiling")
 
     # Save original for reference
     mod = mod_in
@@ -49,8 +49,7 @@ def main():
     modules = get_modules()
 
     for mod in modules:
-        print("name:", mod[0])
-        print("mod:", mod[1 ])
+        print("compiling model ", mod[0])
         optimize_and_save_model(mod[0], mod[1])
 
 if __name__ == '__main__':

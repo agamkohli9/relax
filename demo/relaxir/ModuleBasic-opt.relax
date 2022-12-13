@@ -1,7 +1,7 @@
 @R.function
 def foo() -> R.Tensor(None, dtype="int32", ndim=0):
     # block 0
-    res: R.Tensor((), dtype="int32") = 138
-    return 138
+    res: R.Tensor((), dtype="int32") = 70
+    return 70
     
 

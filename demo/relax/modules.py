@@ -10,7 +10,7 @@ class TestClass:
 class ModuleBasic:
     @R.function
     def main():
-        res = R.add(R.const(69), R.const(69))
+        res = R.add(R.const(30), R.const(40))
         return res
 
 @tvm.script.ir_module
@@ -18,9 +18,9 @@ class ModuleBasic2:
     @R.function
     def main():
         a = R.const(20)
-        b = R.add(a, R.const(20))
-        c = R.add(a, a)
-        d = R.add(R.const(65), R.const(65))
+        b = R.add(a, a)
+        c = R.add(a, R.const(20))
+        d = R.add(R.const(20), R.const(20))
         return d
 
 @tvm.script.ir_module

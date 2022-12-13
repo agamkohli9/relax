@@ -9,5 +9,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+
 def log(message: str, color: str):
     print(f"{color}{message}{bcolors.ENDC}")
