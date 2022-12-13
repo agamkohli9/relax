@@ -6,11 +6,11 @@ from tvm import relax, tir, topi
 from tvm.runtime import container
 from tvm.target.target import Target
 from tvm.relax.testing import nn
-
 import tvm.script
 from tvm.script import tir as T, relax as R
 
 from logger import bcolors, log
+
 
 def get_modules():
     mods = []
@@ -27,7 +27,7 @@ def save_model(model, filepath):
 
 
 def optimize_and_save_model(output_dir, mod_name, mod_in):
-    
+
     filepath_raw = os.path.join(output_dir, f'{mod_name}-raw.relax')
     filepath_opt = os.path.join(output_dir, f'{mod_name}-opt.relax')
 
