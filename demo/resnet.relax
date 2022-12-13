@@ -1,0 +1,1867 @@
+@tvm.script.ir_module
+class Module:
+    @T.prim_func
+    def add9(rxplaceholder: T.Buffer[T.int64(128), "float32"], rxplaceholder_1: T.Buffer[T.int64(128), "float32"], T_add: T.Buffer[T.int64(128), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(128)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(128), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def add(rxplaceholder: T.Buffer[T.int64(3), "float32"], rxplaceholder_1: T.Buffer[(), "float32"], T_add: T.Buffer[T.int64(3), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(3)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(3), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[()])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[()]
+    
+    @T.prim_func
+    def add16(rxplaceholder: T.Buffer[T.int64(512), "float32"], rxplaceholder_1: T.Buffer[(), "float32"], T_add: T.Buffer[T.int64(512), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(512)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(512), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[()])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[()]
+    
+    @T.prim_func
+    def negative4(rxplaceholder: T.Buffer[T.int64(512), "float32"], T_negative: T.Buffer[T.int64(512), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(512)):
+            with T.block("T_negative"):
+                ax0 = T.axis.spatial(T.int64(512), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_negative[ax0])
+                T_negative[ax0] = T.float32(0) - rxplaceholder[ax0]
+    
+    @T.prim_func
+    def conv2d11(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(512), T.int64(256), T.int64(1), T.int64(1)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(128), T.int64(64), T.int64(1), T.int64(1), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(128), T.int64(64), T.int64(1), T.int64(1), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4), T.int64(256), T.int64(1), T.int64(1)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_vec[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_vec[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def relu1(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], T_relu: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56)):
+            with T.block("T_relu"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3])
+                T.writes(T_relu[ax0, ax1, ax2, ax3])
+                T_relu[ax0, ax1, ax2, ax3] = T.max(rxplaceholder[ax0, ax1, ax2, ax3], T.float32(0))
+    
+    @T.prim_func
+    def expand_dims8(rxplaceholder: T.Buffer[T.int64(256), "float32"], T_expand_dims: T.Buffer[(T.int64(256), T.int64(1), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(256), T.int64(1), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def multiply17(rxplaceholder: T.Buffer[(T.int64(512), T.int64(512), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(512), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(512), T.int64(512), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(512), T.int64(512), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def conv2d2(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(64), T.int64(64), T.int64(1), T.int64(1)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(16), T.int64(16), T.int64(1), T.int64(1), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(16), T.int64(16), T.int64(1), T.int64(1), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4), T.int64(64), T.int64(1), T.int64(1)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_vec[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_vec[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def expand_dims5(rxplaceholder: T.Buffer[T.int64(128), "float32"], T_expand_dims: T.Buffer[(T.int64(128), T.int64(1), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(128), T.int64(1), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def global_avg_pool2d(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], adaptive_pool_avg: T.Buffer[(T.int64(1), T.int64(512), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        adaptive_pool_sum = T.alloc_buffer([T.int64(1), T.int64(512), T.int64(1), T.int64(1)], dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(1), T.int64(512), T.int64(1), T.int64(1), T.int64(7), T.int64(7)):
+            with T.block("adaptive_pool_sum"):
+                ax0, ax1, ax2, ax3, rv0, rv1 = T.axis.remap("SSSSRR", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder[ax0, ax1, ax2 * T.int64(7) + rv0, ax3 * T.int64(7) + rv1])
+                T.writes(adaptive_pool_sum[ax0, ax1, ax2, ax3])
+                with T.init():
+                    adaptive_pool_sum[ax0, ax1, ax2, ax3] = T.float32(0)
+                adaptive_pool_sum[ax0, ax1, ax2, ax3] = adaptive_pool_sum[ax0, ax1, ax2, ax3] + rxplaceholder[ax0, ax1, ax2 * T.int64(7) + rv0, ax3 * T.int64(7) + rv1]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(1), T.int64(1)):
+            with T.block("adaptive_pool_avg"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(adaptive_pool_sum[ax0, ax1, ax2, ax3])
+                T.writes(adaptive_pool_avg[ax0, ax1, ax2, ax3])
+                T.block_attr({"schedule_rule":"meta_schedule.adaptive_pool_avg"})
+                adaptive_pool_avg[ax0, ax1, ax2, ax3] = adaptive_pool_sum[ax0, ax1, ax2, ax3] * T.float32(0.020408163265306121)
+    
+    @T.prim_func
+    def multiply2(rxplaceholder: T.Buffer[(T.int64(64), T.int64(3), T.int64(7), T.int64(7)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(64), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(64), T.int64(3), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(64), T.int64(3), T.int64(7), T.int64(7)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def rsqrt(rxplaceholder: T.Buffer[T.int64(3), "float32"], tensor: T.Buffer[T.int64(3), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(3)):
+            with T.block("tensor"):
+                ax0 = T.axis.spatial(T.int64(3), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(tensor[ax0])
+                tensor[ax0] = T.float32(1) / T.sqrt(rxplaceholder[ax0], dtype="float32")
+    
+    @T.prim_func
+    def multiply(rxplaceholder: T.Buffer[T.int64(3), "float32"], rxplaceholder_1: T.Buffer[T.int64(3), "float32"], T_multiply: T.Buffer[T.int64(3), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(3)):
+            with T.block("T_multiply"):
+                ax0 = T.axis.spatial(T.int64(3), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_multiply[ax0])
+                T_multiply[ax0] = rxplaceholder[ax0] * rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def multiply14(rxplaceholder: T.Buffer[T.int64(512), "float32"], rxplaceholder_1: T.Buffer[T.int64(512), "float32"], T_multiply: T.Buffer[T.int64(512), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(512)):
+            with T.block("T_multiply"):
+                ax0 = T.axis.spatial(T.int64(512), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_multiply[ax0])
+                T_multiply[ax0] = rxplaceholder[ax0] * rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def divide(rxplaceholder: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"], T_divide: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(3), T.int64(1), T.int64(1)):
+            with T.block("T_divide"):
+                ax0, ax1, ax2 = T.axis.remap("SSS", [i0, i1, i2])
+                T.reads(rxplaceholder[ax0, ax1, ax2], rxplaceholder_1[ax0, ax1, ax2])
+                T.writes(T_divide[ax0, ax1, ax2])
+                T_divide[ax0, ax1, ax2] = rxplaceholder[ax0, ax1, ax2] / rxplaceholder_1[ax0, ax1, ax2]
+    
+    @T.prim_func
+    def conv2d10(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(512), T.int64(512), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(128), T.int64(9), T.int64(9), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(128), T.int64(128), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(128), T.int64(9), T.int64(9), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(8) and T.int64(1) <= i3_1 and i3_1 < T.int64(8), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(128), T.int64(128), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4), T.int64(512), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def multiply5(rxplaceholder: T.Buffer[(T.int64(64), T.int64(64), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(64), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(64), T.int64(64), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(64), T.int64(64), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def expand_dims1(rxplaceholder: T.Buffer[T.int64(64), "float32"], T_expand_dims: T.Buffer[(T.int64(64), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(64), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2 = T.axis.remap("SSS", [i0, i1, i2])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2])
+                T_expand_dims[ax0, ax1, ax2] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def multiply10(rxplaceholder: T.Buffer[T.int64(256), "float32"], rxplaceholder_1: T.Buffer[T.int64(256), "float32"], T_multiply: T.Buffer[T.int64(256), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(256)):
+            with T.block("T_multiply"):
+                ax0 = T.axis.spatial(T.int64(256), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_multiply[ax0])
+                T_multiply[ax0] = rxplaceholder[ax0] * rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def conv2d4(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(128), T.int64(128), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(30), T.int64(30), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(32), T.int64(32), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(32), T.int64(30), T.int64(30), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(29) and T.int64(1) <= i3_1 and i3_1 < T.int64(29), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(32), T.int64(32), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4), T.int64(128), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def add18(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(512), T.int64(1), T.int64(1)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def relu3(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], T_relu: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("T_relu"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3])
+                T.writes(T_relu[ax0, ax1, ax2, ax3])
+                T_relu[ax0, ax1, ax2, ax3] = T.max(rxplaceholder[ax0, ax1, ax2, ax3], T.float32(0))
+    
+    @T.prim_func
+    def multiply11(rxplaceholder: T.Buffer[(T.int64(256), T.int64(128), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(256), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(256), T.int64(128), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(256), T.int64(128), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def negative2(rxplaceholder: T.Buffer[T.int64(128), "float32"], T_negative: T.Buffer[T.int64(128), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(128)):
+            with T.block("T_negative"):
+                ax0 = T.axis.spatial(T.int64(128), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_negative[ax0])
+                T_negative[ax0] = T.float32(0) - rxplaceholder[ax0]
+    
+    @T.prim_func
+    def negative1(rxplaceholder: T.Buffer[T.int64(64), "float32"], T_negative: T.Buffer[T.int64(64), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(64)):
+            with T.block("T_negative"):
+                ax0 = T.axis.spatial(T.int64(64), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_negative[ax0])
+                T_negative[ax0] = T.float32(0) - rxplaceholder[ax0]
+    
+    @T.prim_func
+    def conv2d9(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(512), T.int64(256), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(16), T.int64(16), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(128), T.int64(64), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(64), T.int64(16), T.int64(16), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(15) and T.int64(1) <= i3_1 and i3_1 < T.int64(15), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(128), T.int64(64), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(128), T.int64(7), T.int64(7), T.int64(4), T.int64(256), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def squeeze3(rxplaceholder: T.Buffer[(T.int64(256), T.int64(1), T.int64(1)), "float32"], T_squeeze: T.Buffer[T.int64(256), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(256)):
+            with T.block("T_squeeze"):
+                ax0 = T.axis.spatial(T.int64(256), i0)
+                T.reads(rxplaceholder[ax0, T.int64(0), T.int64(0)])
+                T.writes(T_squeeze[ax0])
+                T_squeeze[ax0] = rxplaceholder[ax0, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def conv2d7(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(256), T.int64(256), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(16), T.int64(16), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(64), T.int64(64), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(64), T.int64(16), T.int64(16), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(15) and T.int64(1) <= i3_1 and i3_1 < T.int64(15), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(64), T.int64(64), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4), T.int64(256), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def add3(rxplaceholder: T.Buffer[T.int64(64), "float32"], rxplaceholder_1: T.Buffer[(), "float32"], T_add: T.Buffer[T.int64(64), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(64)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(64), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[()])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[()]
+    
+    @T.prim_func
+    def add5(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(112), T.int64(112)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(64), T.int64(1), T.int64(1)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(64), T.int64(112), T.int64(112)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(112), T.int64(112)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply6(rxplaceholder: T.Buffer[T.int64(128), "float32"], rxplaceholder_1: T.Buffer[T.int64(128), "float32"], T_multiply: T.Buffer[T.int64(128), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(128)):
+            with T.block("T_multiply"):
+                ax0 = T.axis.spatial(T.int64(128), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_multiply[ax0])
+                T_multiply[ax0] = rxplaceholder[ax0] * rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def add13(rxplaceholder: T.Buffer[T.int64(256), "float32"], rxplaceholder_1: T.Buffer[T.int64(256), "float32"], T_add: T.Buffer[T.int64(256), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(256)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(256), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def max_pool2d(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(112), T.int64(112)), "float32"], pool_max: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        pad_temp = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(114), T.int64(114)], dtype="float32")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(114), T.int64(114)):
+            with T.block("pad_temp"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2 - T.int64(1), ax3 - T.int64(1)])
+                T.writes(pad_temp[ax0, ax1, ax2, ax3])
+                pad_temp[ax0, ax1, ax2, ax3] = T.if_then_else(T.int64(1) <= ax2 and ax2 < T.int64(113) and T.int64(1) <= ax3 and ax3 < T.int64(113), rxplaceholder[ax0, ax1, ax2 - T.int64(1), ax3 - T.int64(1)], T.float32(-3.4028234663852886e+38), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56), T.int64(3), T.int64(3)):
+            with T.block("pool_max"):
+                ax0, ax1, ax2, ax3, rv0, rv1 = T.axis.remap("SSSSRR", [i0, i1, i2, i3, i4, i5])
+                T.reads(pad_temp[ax0, ax1, ax2 * T.int64(2) + rv0, ax3 * T.int64(2) + rv1])
+                T.writes(pool_max[ax0, ax1, ax2, ax3])
+                T.block_attr({"schedule_rule":"meta_schedule.pool_max"})
+                with T.init():
+                    pool_max[ax0, ax1, ax2, ax3] = T.float32(-3.4028234663852886e+38)
+                pool_max[ax0, ax1, ax2, ax3] = T.max(pool_max[ax0, ax1, ax2, ax3], pad_temp[ax0, ax1, ax2 * T.int64(2) + rv0, ax3 * T.int64(2) + rv1])
+    
+    @T.prim_func
+    def add15(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, ax2, ax3])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, ax2, ax3]
+    
+    @T.prim_func
+    def multiply7(rxplaceholder: T.Buffer[(T.int64(128), T.int64(64), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(128), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(128), T.int64(64), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(128), T.int64(64), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def expand_dims11(rxplaceholder: T.Buffer[T.int64(512), "float32"], T_expand_dims: T.Buffer[(T.int64(512), T.int64(1), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(512), T.int64(1), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def relu4(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], T_relu: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("T_relu"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3])
+                T.writes(T_relu[ax0, ax1, ax2, ax3])
+                T_relu[ax0, ax1, ax2, ax3] = T.max(rxplaceholder[ax0, ax1, ax2, ax3], T.float32(0))
+    
+    @T.prim_func
+    def expand_dims(rxplaceholder: T.Buffer[T.int64(3), "float32"], T_expand_dims: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(3), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2 = T.axis.remap("SSS", [i0, i1, i2])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2])
+                T_expand_dims[ax0, ax1, ax2] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def squeeze1(rxplaceholder: T.Buffer[(T.int64(64), T.int64(1), T.int64(1)), "float32"], T_squeeze: T.Buffer[T.int64(64), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(64)):
+            with T.block("T_squeeze"):
+                ax0 = T.axis.spatial(T.int64(64), i0)
+                T.reads(rxplaceholder[ax0, T.int64(0), T.int64(0)])
+                T.writes(T_squeeze[ax0])
+                T_squeeze[ax0] = rxplaceholder[ax0, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def conv2d(rxplaceholder: T.Buffer[(T.int64(1), T.int64(3), T.int64(224), T.int64(224)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(64), T.int64(3), T.int64(7), T.int64(7)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(64), T.int64(112), T.int64(112)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(1), T.int64(224), T.int64(224), T.int64(3)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(1), T.int64(230), T.int64(230), T.int64(3)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(16), T.int64(1), T.int64(7), T.int64(7), T.int64(3), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(112), T.int64(112), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(1), T.int64(224), T.int64(224), T.int64(3)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(3) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(3) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(1), T.int64(230), T.int64(230), T.int64(3)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(3), i3_1 - T.int64(3), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(3) <= i2_1 and i2_1 < T.int64(227) and T.int64(3) <= i3_1 and i3_1 < T.int64(227), data_vec[i0_1, i1_1, i2_1 - T.int64(3), i3_1 - T.int64(3), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(16), T.int64(1), T.int64(7), T.int64(7), T.int64(3), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(3) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(3) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(16), T.int64(112), T.int64(112), T.int64(4), T.int64(3), T.int64(7), T.int64(7)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(3), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(3)], kernel_vec[oc_chunk, ic // T.int64(3), kh, kw, ic % T.int64(3), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(3), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(3)] * kernel_vec[oc_chunk, ic // T.int64(3), kh, kw, ic % T.int64(3), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(112), T.int64(112)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def add19(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, ax2, ax3])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, ax2, ax3]
+    
+    @T.prim_func
+    def add20(rxplaceholder: T.Buffer[(T.int64(1), T.int64(1000)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(1000)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(1000)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1 in T.grid(T.int64(1), T.int64(1000)):
+            with T.block("T_add"):
+                ax0, ax1 = T.axis.remap("SS", [i0, i1])
+                T.reads(rxplaceholder[ax0, ax1], rxplaceholder_1[ax0, ax1])
+                T.writes(T_add[ax0, ax1])
+                T_add[ax0, ax1] = rxplaceholder[ax0, ax1] + rxplaceholder_1[ax0, ax1]
+    
+    @T.prim_func
+    def conv2d6(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(256), T.int64(128), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(30), T.int64(30), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(64), T.int64(32), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(32), T.int64(30), T.int64(30), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(29) and T.int64(1) <= i3_1 and i3_1 < T.int64(29), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(64), T.int64(32), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4), T.int64(128), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def multiply8(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(128), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def add14(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(256), T.int64(1), T.int64(1)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply9(rxplaceholder: T.Buffer[(T.int64(128), T.int64(128), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(128), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(128), T.int64(128), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(128), T.int64(128), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply16(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(512), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(1), T.int64(512), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(7), T.int64(7)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def negative(rxplaceholder: T.Buffer[T.int64(3), "float32"], T_negative: T.Buffer[T.int64(3), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(3)):
+            with T.block("T_negative"):
+                ax0 = T.axis.spatial(T.int64(3), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_negative[ax0])
+                T_negative[ax0] = T.float32(0) - rxplaceholder[ax0]
+    
+    @T.prim_func
+    def conv2d1(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(64), T.int64(64), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(58), T.int64(58), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(16), T.int64(16), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(16), T.int64(58), T.int64(58), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(57) and T.int64(1) <= i3_1 and i3_1 < T.int64(57), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(16), T.int64(16), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4), T.int64(64), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh + kh, ow + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def add12(rxplaceholder: T.Buffer[T.int64(256), "float32"], rxplaceholder_1: T.Buffer[(), "float32"], T_add: T.Buffer[T.int64(256), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(256)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(256), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[()])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[()]
+    
+    @T.prim_func
+    def add7(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, ax2, ax3])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, ax2, ax3]
+    
+    @T.prim_func
+    def expand_dims6(rxplaceholder: T.Buffer[(T.int64(128), T.int64(1), T.int64(1)), "float32"], T_expand_dims: T.Buffer[(T.int64(1), T.int64(128), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax1, ax2, ax3])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax1, ax2, ax3]
+    
+    @T.prim_func
+    def add4(rxplaceholder: T.Buffer[T.int64(64), "float32"], rxplaceholder_1: T.Buffer[T.int64(64), "float32"], T_add: T.Buffer[T.int64(64), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(64)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(64), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def relu2(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], T_relu: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("T_relu"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3])
+                T.writes(T_relu[ax0, ax1, ax2, ax3])
+                T_relu[ax0, ax1, ax2, ax3] = T.max(rxplaceholder[ax0, ax1, ax2, ax3], T.float32(0))
+    
+    @T.prim_func
+    def conv2d5(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(128), T.int64(64), T.int64(1), T.int64(1)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(32), T.int64(16), T.int64(1), T.int64(1), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(32), T.int64(16), T.int64(1), T.int64(1), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4), T.int64(64), T.int64(1), T.int64(1)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_vec[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_vec[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def rsqrt4(rxplaceholder: T.Buffer[T.int64(512), "float32"], tensor: T.Buffer[T.int64(512), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(512)):
+            with T.block("tensor"):
+                ax0 = T.axis.spatial(T.int64(512), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(tensor[ax0])
+                tensor[ax0] = T.float32(1) / T.sqrt(rxplaceholder[ax0], dtype="float32")
+    
+    @T.prim_func
+    def squeeze(rxplaceholder: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"], T_squeeze: T.Buffer[T.int64(3), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(3)):
+            with T.block("T_squeeze"):
+                ax0 = T.axis.spatial(T.int64(3), i0)
+                T.reads(rxplaceholder[ax0, T.int64(0), T.int64(0)])
+                T.writes(T_squeeze[ax0])
+                T_squeeze[ax0] = rxplaceholder[ax0, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def rsqrt3(rxplaceholder: T.Buffer[T.int64(256), "float32"], tensor: T.Buffer[T.int64(256), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(256)):
+            with T.block("tensor"):
+                ax0 = T.axis.spatial(T.int64(256), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(tensor[ax0])
+                tensor[ax0] = T.float32(1) / T.sqrt(rxplaceholder[ax0], dtype="float32")
+    
+    @T.prim_func
+    def expand_dims10(rxplaceholder: T.Buffer[T.int64(512), "float32"], T_expand_dims: T.Buffer[(T.int64(512), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(512), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2 = T.axis.remap("SSS", [i0, i1, i2])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2])
+                T_expand_dims[ax0, ax1, ax2] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def add2(rxplaceholder: T.Buffer[(T.int64(1), T.int64(3), T.int64(224), T.int64(224)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(3), T.int64(224), T.int64(224)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(3), T.int64(224), T.int64(224)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax1, T.int64(0), T.int64(0)])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply15(rxplaceholder: T.Buffer[(T.int64(512), T.int64(256), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(512), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(512), T.int64(256), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(512), T.int64(256), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply12(rxplaceholder: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(256), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def batch_flatten(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512), T.int64(1), T.int64(1)), "float32"], tensor: T.Buffer[(T.int64(1), T.int64(512)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1 in T.grid(T.int64(1), T.int64(512)):
+            with T.block("tensor"):
+                ax0, ax1 = T.axis.remap("SS", [i0, i1])
+                T.reads(rxplaceholder[ax0, ax1 % T.int64(512), T.int64(0), T.int64(0)])
+                T.writes(tensor[ax0, ax1])
+                tensor[ax0, ax1] = rxplaceholder[ax0, ax1 % T.int64(512), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply1(rxplaceholder: T.Buffer[T.int64(64), "float32"], rxplaceholder_1: T.Buffer[T.int64(64), "float32"], T_multiply: T.Buffer[T.int64(64), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(64)):
+            with T.block("T_multiply"):
+                ax0 = T.axis.spatial(T.int64(64), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_multiply[ax0])
+                T_multiply[ax0] = rxplaceholder[ax0] * rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def expand_dims9(rxplaceholder: T.Buffer[(T.int64(256), T.int64(1), T.int64(1)), "float32"], T_expand_dims: T.Buffer[(T.int64(1), T.int64(256), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax1, ax2, ax3])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax1, ax2, ax3]
+    
+    @T.prim_func
+    def relu(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(112), T.int64(112)), "float32"], T_relu: T.Buffer[(T.int64(1), T.int64(64), T.int64(112), T.int64(112)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(112), T.int64(112)):
+            with T.block("T_relu"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3])
+                T.writes(T_relu[ax0, ax1, ax2, ax3])
+                T_relu[ax0, ax1, ax2, ax3] = T.max(rxplaceholder[ax0, ax1, ax2, ax3], T.float32(0))
+    
+    @T.prim_func
+    def expand_dims4(rxplaceholder: T.Buffer[T.int64(128), "float32"], T_expand_dims: T.Buffer[(T.int64(128), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(128), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2 = T.axis.remap("SSS", [i0, i1, i2])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2])
+                T_expand_dims[ax0, ax1, ax2] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def dense(rxplaceholder: T.Buffer[(T.int64(1), T.int64(512)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1000), T.int64(512)), "float32"], T_matmul_NT: T.Buffer[(T.int64(1), T.int64(1000)), "float32"]):
+        # function attr dict
+        T.func_attr({"layout_free_buffers": [1], "tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(1), T.int64(1000), T.int64(512)):
+            with T.block("T_matmul_NT"):
+                i, j, k = T.axis.remap("SSR", [i0, i1, i2])
+                T.reads(rxplaceholder[i, k], rxplaceholder_1[j, k])
+                T.writes(T_matmul_NT[i, j])
+                with T.init():
+                    T_matmul_NT[i, j] = T.float32(0)
+                T_matmul_NT[i, j] = T_matmul_NT[i, j] + rxplaceholder[i, k] * rxplaceholder_1[j, k]
+    
+    @T.prim_func
+    def rsqrt2(rxplaceholder: T.Buffer[T.int64(128), "float32"], tensor: T.Buffer[T.int64(128), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(128)):
+            with T.block("tensor"):
+                ax0 = T.axis.spatial(T.int64(128), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(tensor[ax0])
+                tensor[ax0] = T.float32(1) / T.sqrt(rxplaceholder[ax0], dtype="float32")
+    
+    @T.prim_func
+    def expand_dims13(rxplaceholder: T.Buffer[T.int64(1000), "float32"], T_expand_dims: T.Buffer[(T.int64(1), T.int64(1000)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1 in T.grid(T.int64(1), T.int64(1000)):
+            with T.block("T_expand_dims"):
+                ax0, ax1 = T.axis.remap("SS", [i0, i1])
+                T.reads(rxplaceholder[ax1])
+                T.writes(T_expand_dims[ax0, ax1])
+                T_expand_dims[ax0, ax1] = rxplaceholder[ax1]
+    
+    @R.function
+    def main(data: R.Tensor((1, 3, 224, 224), dtype="float32"), bn_data_gamma: R.Tensor((3,), dtype="float32"), bn_data_beta: R.Tensor((3,), dtype="float32"), bn_data_moving_mean: R.Tensor((3,), dtype="float32"), bn_data_moving_var: R.Tensor((3,), dtype="float32"), conv0_weight: R.Tensor((64, 3, 7, 7), dtype="float32"), bn0_gamma: R.Tensor((64,), dtype="float32"), bn0_beta: R.Tensor((64,), dtype="float32"), bn0_moving_mean: R.Tensor((64,), dtype="float32"), bn0_moving_var: R.Tensor((64,), dtype="float32"), stage1_unit1_bn1_gamma: R.Tensor((64,), dtype="float32"), stage1_unit1_bn1_beta: R.Tensor((64,), dtype="float32"), stage1_unit1_bn1_moving_mean: R.Tensor((64,), dtype="float32"), stage1_unit1_bn1_moving_var: R.Tensor((64,), dtype="float32"), stage1_unit1_conv1_weight: R.Tensor((64, 64, 3, 3), dtype="float32"), stage1_unit1_bn2_gamma: R.Tensor((64,), dtype="float32"), stage1_unit1_bn2_beta: R.Tensor((64,), dtype="float32"), stage1_unit1_bn2_moving_mean: R.Tensor((64,), dtype="float32"), stage1_unit1_bn2_moving_var: R.Tensor((64,), dtype="float32"), stage1_unit1_conv2_weight: R.Tensor((64, 64, 3, 3), dtype="float32"), stage1_unit1_sc_weight: R.Tensor((64, 64, 1, 1), dtype="float32"), stage1_unit2_bn1_gamma: R.Tensor((64,), dtype="float32"), stage1_unit2_bn1_beta: R.Tensor((64,), dtype="float32"), stage1_unit2_bn1_moving_mean: R.Tensor((64,), dtype="float32"), stage1_unit2_bn1_moving_var: R.Tensor((64,), dtype="float32"), stage1_unit2_conv1_weight: R.Tensor((64, 64, 3, 3), dtype="float32"), stage1_unit2_bn2_gamma: R.Tensor((64,), dtype="float32"), stage1_unit2_bn2_beta: R.Tensor((64,), dtype="float32"), stage1_unit2_bn2_moving_mean: R.Tensor((64,), dtype="float32"), stage1_unit2_bn2_moving_var: R.Tensor((64,), dtype="float32"), stage1_unit2_conv2_weight: R.Tensor((64, 64, 3, 3), dtype="float32"), stage2_unit1_bn1_gamma: R.Tensor((64,), dtype="float32"), stage2_unit1_bn1_beta: R.Tensor((64,), dtype="float32"), stage2_unit1_bn1_moving_mean: R.Tensor((64,), dtype="float32"), stage2_unit1_bn1_moving_var: R.Tensor((64,), dtype="float32"), stage2_unit1_conv1_weight: R.Tensor((128, 64, 3, 3), dtype="float32"), stage2_unit1_bn2_gamma: R.Tensor((128,), dtype="float32"), stage2_unit1_bn2_beta: R.Tensor((128,), dtype="float32"), stage2_unit1_bn2_moving_mean: R.Tensor((128,), dtype="float32"), stage2_unit1_bn2_moving_var: R.Tensor((128,), dtype="float32"), stage2_unit1_conv2_weight: R.Tensor((128, 128, 3, 3), dtype="float32"), stage2_unit1_sc_weight: R.Tensor((128, 64, 1, 1), dtype="float32"), stage2_unit2_bn1_gamma: R.Tensor((128,), dtype="float32"), stage2_unit2_bn1_beta: R.Tensor((128,), dtype="float32"), stage2_unit2_bn1_moving_mean: R.Tensor((128,), dtype="float32"), stage2_unit2_bn1_moving_var: R.Tensor((128,), dtype="float32"), stage2_unit2_conv1_weight: R.Tensor((128, 128, 3, 3), dtype="float32"), stage2_unit2_bn2_gamma: R.Tensor((128,), dtype="float32"), stage2_unit2_bn2_beta: R.Tensor((128,), dtype="float32"), stage2_unit2_bn2_moving_mean: R.Tensor((128,), dtype="float32"), stage2_unit2_bn2_moving_var: R.Tensor((128,), dtype="float32"), stage2_unit2_conv2_weight: R.Tensor((128, 128, 3, 3), dtype="float32"), stage3_unit1_bn1_gamma: R.Tensor((128,), dtype="float32"), stage3_unit1_bn1_beta: R.Tensor((128,), dtype="float32"), stage3_unit1_bn1_moving_mean: R.Tensor((128,), dtype="float32"), stage3_unit1_bn1_moving_var: R.Tensor((128,), dtype="float32"), stage3_unit1_conv1_weight: R.Tensor((256, 128, 3, 3), dtype="float32"), stage3_unit1_bn2_gamma: R.Tensor((256,), dtype="float32"), stage3_unit1_bn2_beta: R.Tensor((256,), dtype="float32"), stage3_unit1_bn2_moving_mean: R.Tensor((256,), dtype="float32"), stage3_unit1_bn2_moving_var: R.Tensor((256,), dtype="float32"), stage3_unit1_conv2_weight: R.Tensor((256, 256, 3, 3), dtype="float32"), stage3_unit1_sc_weight: R.Tensor((256, 128, 1, 1), dtype="float32"), stage3_unit2_bn1_gamma: R.Tensor((256,), dtype="float32"), stage3_unit2_bn1_beta: R.Tensor((256,), dtype="float32"), stage3_unit2_bn1_moving_mean: R.Tensor((256,), dtype="float32"), stage3_unit2_bn1_moving_var: R.Tensor((256,), dtype="float32"), stage3_unit2_conv1_weight: R.Tensor((256, 256, 3, 3), dtype="float32"), stage3_unit2_bn2_gamma: R.Tensor((256,), dtype="float32"), stage3_unit2_bn2_beta: R.Tensor((256,), dtype="float32"), stage3_unit2_bn2_moving_mean: R.Tensor((256,), dtype="float32"), stage3_unit2_bn2_moving_var: R.Tensor((256,), dtype="float32"), stage3_unit2_conv2_weight: R.Tensor((256, 256, 3, 3), dtype="float32"), stage4_unit1_bn1_gamma: R.Tensor((256,), dtype="float32"), stage4_unit1_bn1_beta: R.Tensor((256,), dtype="float32"), stage4_unit1_bn1_moving_mean: R.Tensor((256,), dtype="float32"), stage4_unit1_bn1_moving_var: R.Tensor((256,), dtype="float32"), stage4_unit1_conv1_weight: R.Tensor((512, 256, 3, 3), dtype="float32"), stage4_unit1_bn2_gamma: R.Tensor((512,), dtype="float32"), stage4_unit1_bn2_beta: R.Tensor((512,), dtype="float32"), stage4_unit1_bn2_moving_mean: R.Tensor((512,), dtype="float32"), stage4_unit1_bn2_moving_var: R.Tensor((512,), dtype="float32"), stage4_unit1_conv2_weight: R.Tensor((512, 512, 3, 3), dtype="float32"), stage4_unit1_sc_weight: R.Tensor((512, 256, 1, 1), dtype="float32"), stage4_unit2_bn1_gamma: R.Tensor((512,), dtype="float32"), stage4_unit2_bn1_beta: R.Tensor((512,), dtype="float32"), stage4_unit2_bn1_moving_mean: R.Tensor((512,), dtype="float32"), stage4_unit2_bn1_moving_var: R.Tensor((512,), dtype="float32"), stage4_unit2_conv1_weight: R.Tensor((512, 512, 3, 3), dtype="float32"), stage4_unit2_bn2_gamma: R.Tensor((512,), dtype="float32"), stage4_unit2_bn2_beta: R.Tensor((512,), dtype="float32"), stage4_unit2_bn2_moving_mean: R.Tensor((512,), dtype="float32"), stage4_unit2_bn2_moving_var: R.Tensor((512,), dtype="float32"), stage4_unit2_conv2_weight: R.Tensor((512, 512, 3, 3), dtype="float32"), bn1_gamma: R.Tensor((512,), dtype="float32"), bn1_beta: R.Tensor((512,), dtype="float32"), bn1_moving_mean: R.Tensor((512,), dtype="float32"), bn1_moving_var: R.Tensor((512,), dtype="float32"), fc1_weight: R.Tensor((1000, 512), dtype="float32"), fc1_bias: R.Tensor((1000,), dtype="float32")) -> R.Tensor(None, dtype="float32", ndim=2):
+        # function attr dict
+        R.func_attr({"global_symbol": "main"})
+        # block 0
+        with R.dataflow():
+            lv = R.call_tir(negative, (bn_data_moving_mean,), (3,), dtype="float32")
+            lv1 = R.call_tir(add, (bn_data_moving_var, 2e-05), (3,), dtype="float32")
+            lv2 = R.call_tir(rsqrt, (lv1,), (3,), dtype="float32")
+            lv3 = R.call_tir(multiply, (lv, lv2), (3,), dtype="float32")
+            lv4 = R.call_tir(add1, (lv3, bn_data_beta), (3,), dtype="float32")
+            lv5 = R.call_tir(expand_dims, (lv4,), (3, 1, 1), dtype="float32")
+            lv6 = R.call_tir(expand_dims, (lv2,), (3, 1, 1), dtype="float32")
+            lv7 = R.call_tir(squeeze, (lv6,), (3,), dtype="float32")
+            lv8 = R.call_tir(expand_dims, (lv7,), (3, 1, 1), dtype="float32")
+            lv9 = R.call_tir(divide, (lv5, lv8), (3, 1, 1), dtype="float32")
+            lv10 = R.call_tir(add2, (data, lv9), (1, 3, 224, 224), dtype="float32")
+            lv11 = R.call_tir(add3, (bn0_moving_var, 2e-05), (64,), dtype="float32")
+            lv12 = R.call_tir(rsqrt1, (lv11,), (64,), dtype="float32")
+            lv13 = R.call_tir(multiply1, (lv12, bn0_gamma), (64,), dtype="float32")
+            lv14 = R.call_tir(expand_dims1, (lv13,), (64, 1, 1), dtype="float32")
+            lv15 = R.call_tir(squeeze1, (lv14,), (64,), dtype="float32")
+            lv16 = R.call_tir(expand_dims2, (lv15,), (64, 1, 1, 1), dtype="float32")
+            lv17 = R.call_tir(multiply2, (conv0_weight, lv16), (64, 3, 7, 7), dtype="float32")
+            lv18 = R.call_tir(expand_dims, (lv7,), (3, 1, 1), dtype="float32")
+            lv19 = R.call_tir(multiply3, (lv17, lv18), (64, 3, 7, 7), dtype="float32")
+            lv20 = R.call_tir(conv2d, (lv10, lv19), (1, 64, 112, 112), dtype="float32")
+            lv21 = R.call_tir(negative1, (bn0_moving_mean,), (64,), dtype="float32")
+            lv22 = R.call_tir(multiply1, (lv21, lv13), (64,), dtype="float32")
+            lv23 = R.call_tir(add4, (lv22, bn0_beta), (64,), dtype="float32")
+            lv24 = R.call_tir(expand_dims1, (lv23,), (64, 1, 1), dtype="float32")
+            lv25 = R.call_tir(expand_dims3, (lv24,), (1, 64, 1, 1), dtype="float32")
+            lv26 = R.call_tir(add5, (lv20, lv25), (1, 64, 112, 112), dtype="float32")
+            lv27 = R.call_tir(relu, (lv26,), (1, 64, 112, 112), dtype="float32")
+            lv28 = R.call_tir(max_pool2d, (lv27,), (1, 64, 56, 56), dtype="float32")
+            lv29 = R.call_tir(add3, (stage1_unit1_bn1_moving_var, 2e-05), (64,), dtype="float32")
+            lv30 = R.call_tir(rsqrt1, (lv29,), (64,), dtype="float32")
+            lv31 = R.call_tir(multiply1, (lv30, stage1_unit1_bn1_gamma), (64,), dtype="float32")
+            lv32 = R.call_tir(expand_dims1, (lv31,), (64, 1, 1), dtype="float32")
+            lv33 = R.call_tir(expand_dims3, (lv32,), (1, 64, 1, 1), dtype="float32")
+            lv34 = R.call_tir(multiply4, (lv28, lv33), (1, 64, 56, 56), dtype="float32")
+            lv35 = R.call_tir(negative1, (stage1_unit1_bn1_moving_mean,), (64,), dtype="float32")
+            lv36 = R.call_tir(multiply1, (lv35, lv31), (64,), dtype="float32")
+            lv37 = R.call_tir(add4, (lv36, stage1_unit1_bn1_beta), (64,), dtype="float32")
+            lv38 = R.call_tir(expand_dims1, (lv37,), (64, 1, 1), dtype="float32")
+            lv39 = R.call_tir(expand_dims3, (lv38,), (1, 64, 1, 1), dtype="float32")
+            lv40 = R.call_tir(add6, (lv34, lv39), (1, 64, 56, 56), dtype="float32")
+            lv41 = R.call_tir(relu1, (lv40,), (1, 64, 56, 56), dtype="float32")
+            lv42 = R.call_tir(add3, (stage1_unit1_bn2_moving_var, 2e-05), (64,), dtype="float32")
+            lv43 = R.call_tir(rsqrt1, (lv42,), (64,), dtype="float32")
+            lv44 = R.call_tir(multiply1, (lv43, stage1_unit1_bn2_gamma), (64,), dtype="float32")
+            lv45 = R.call_tir(expand_dims1, (lv44,), (64, 1, 1), dtype="float32")
+            lv46 = R.call_tir(squeeze1, (lv45,), (64,), dtype="float32")
+            lv47 = R.call_tir(expand_dims2, (lv46,), (64, 1, 1, 1), dtype="float32")
+            lv48 = R.call_tir(multiply5, (stage1_unit1_conv1_weight, lv47), (64, 64, 3, 3), dtype="float32")
+            lv49 = R.call_tir(conv2d1, (lv41, lv48), (1, 64, 56, 56), dtype="float32")
+            lv50 = R.call_tir(negative1, (stage1_unit1_bn2_moving_mean,), (64,), dtype="float32")
+            lv51 = R.call_tir(multiply1, (lv50, lv44), (64,), dtype="float32")
+            lv52 = R.call_tir(add4, (lv51, stage1_unit1_bn2_beta), (64,), dtype="float32")
+            lv53 = R.call_tir(expand_dims1, (lv52,), (64, 1, 1), dtype="float32")
+            lv54 = R.call_tir(expand_dims3, (lv53,), (1, 64, 1, 1), dtype="float32")
+            lv55 = R.call_tir(add6, (lv49, lv54), (1, 64, 56, 56), dtype="float32")
+            lv56 = R.call_tir(relu1, (lv55,), (1, 64, 56, 56), dtype="float32")
+            lv57 = R.call_tir(conv2d1, (lv56, stage1_unit1_conv2_weight), (1, 64, 56, 56), dtype="float32")
+            lv58 = R.call_tir(conv2d2, (lv41, stage1_unit1_sc_weight), (1, 64, 56, 56), dtype="float32")
+            lv59 = R.call_tir(add7, (lv57, lv58), (1, 64, 56, 56), dtype="float32")
+            lv60 = R.call_tir(add3, (stage1_unit2_bn1_moving_var, 2e-05), (64,), dtype="float32")
+            lv61 = R.call_tir(rsqrt1, (lv60,), (64,), dtype="float32")
+            lv62 = R.call_tir(multiply1, (lv61, stage1_unit2_bn1_gamma), (64,), dtype="float32")
+            lv63 = R.call_tir(expand_dims1, (lv62,), (64, 1, 1), dtype="float32")
+            lv64 = R.call_tir(expand_dims3, (lv63,), (1, 64, 1, 1), dtype="float32")
+            lv65 = R.call_tir(multiply4, (lv59, lv64), (1, 64, 56, 56), dtype="float32")
+            lv66 = R.call_tir(negative1, (stage1_unit2_bn1_moving_mean,), (64,), dtype="float32")
+            lv67 = R.call_tir(multiply1, (lv66, lv62), (64,), dtype="float32")
+            lv68 = R.call_tir(add4, (lv67, stage1_unit2_bn1_beta), (64,), dtype="float32")
+            lv69 = R.call_tir(expand_dims1, (lv68,), (64, 1, 1), dtype="float32")
+            lv70 = R.call_tir(expand_dims3, (lv69,), (1, 64, 1, 1), dtype="float32")
+            lv71 = R.call_tir(add6, (lv65, lv70), (1, 64, 56, 56), dtype="float32")
+            lv72 = R.call_tir(relu1, (lv71,), (1, 64, 56, 56), dtype="float32")
+            lv73 = R.call_tir(add3, (stage1_unit2_bn2_moving_var, 2e-05), (64,), dtype="float32")
+            lv74 = R.call_tir(rsqrt1, (lv73,), (64,), dtype="float32")
+            lv75 = R.call_tir(multiply1, (lv74, stage1_unit2_bn2_gamma), (64,), dtype="float32")
+            lv76 = R.call_tir(expand_dims1, (lv75,), (64, 1, 1), dtype="float32")
+            lv77 = R.call_tir(squeeze1, (lv76,), (64,), dtype="float32")
+            lv78 = R.call_tir(expand_dims2, (lv77,), (64, 1, 1, 1), dtype="float32")
+            lv79 = R.call_tir(multiply5, (stage1_unit2_conv1_weight, lv78), (64, 64, 3, 3), dtype="float32")
+            lv80 = R.call_tir(conv2d1, (lv72, lv79), (1, 64, 56, 56), dtype="float32")
+            lv81 = R.call_tir(negative1, (stage1_unit2_bn2_moving_mean,), (64,), dtype="float32")
+            lv82 = R.call_tir(multiply1, (lv81, lv75), (64,), dtype="float32")
+            lv83 = R.call_tir(add4, (lv82, stage1_unit2_bn2_beta), (64,), dtype="float32")
+            lv84 = R.call_tir(expand_dims1, (lv83,), (64, 1, 1), dtype="float32")
+            lv85 = R.call_tir(expand_dims3, (lv84,), (1, 64, 1, 1), dtype="float32")
+            lv86 = R.call_tir(add6, (lv80, lv85), (1, 64, 56, 56), dtype="float32")
+            lv87 = R.call_tir(relu1, (lv86,), (1, 64, 56, 56), dtype="float32")
+            lv88 = R.call_tir(conv2d1, (lv87, stage1_unit2_conv2_weight), (1, 64, 56, 56), dtype="float32")
+            lv89 = R.call_tir(add7, (lv88, lv59), (1, 64, 56, 56), dtype="float32")
+            lv90 = R.call_tir(add3, (stage2_unit1_bn1_moving_var, 2e-05), (64,), dtype="float32")
+            lv91 = R.call_tir(rsqrt1, (lv90,), (64,), dtype="float32")
+            lv92 = R.call_tir(multiply1, (lv91, stage2_unit1_bn1_gamma), (64,), dtype="float32")
+            lv93 = R.call_tir(expand_dims1, (lv92,), (64, 1, 1), dtype="float32")
+            lv94 = R.call_tir(expand_dims3, (lv93,), (1, 64, 1, 1), dtype="float32")
+            lv95 = R.call_tir(multiply4, (lv89, lv94), (1, 64, 56, 56), dtype="float32")
+            lv96 = R.call_tir(negative1, (stage2_unit1_bn1_moving_mean,), (64,), dtype="float32")
+            lv97 = R.call_tir(multiply1, (lv96, lv92), (64,), dtype="float32")
+            lv98 = R.call_tir(add4, (lv97, stage2_unit1_bn1_beta), (64,), dtype="float32")
+            lv99 = R.call_tir(expand_dims1, (lv98,), (64, 1, 1), dtype="float32")
+            lv100 = R.call_tir(expand_dims3, (lv99,), (1, 64, 1, 1), dtype="float32")
+            lv101 = R.call_tir(add6, (lv95, lv100), (1, 64, 56, 56), dtype="float32")
+            lv102 = R.call_tir(relu1, (lv101,), (1, 64, 56, 56), dtype="float32")
+            lv103 = R.call_tir(add8, (stage2_unit1_bn2_moving_var, 2e-05), (128,), dtype="float32")
+            lv104 = R.call_tir(rsqrt2, (lv103,), (128,), dtype="float32")
+            lv105 = R.call_tir(multiply6, (lv104, stage2_unit1_bn2_gamma), (128,), dtype="float32")
+            lv106 = R.call_tir(expand_dims4, (lv105,), (128, 1, 1), dtype="float32")
+            lv107 = R.call_tir(squeeze2, (lv106,), (128,), dtype="float32")
+            lv108 = R.call_tir(expand_dims5, (lv107,), (128, 1, 1, 1), dtype="float32")
+            lv109 = R.call_tir(multiply7, (stage2_unit1_conv1_weight, lv108), (128, 64, 3, 3), dtype="float32")
+            lv110 = R.call_tir(conv2d3, (lv102, lv109), (1, 128, 28, 28), dtype="float32")
+            lv111 = R.call_tir(negative2, (stage2_unit1_bn2_moving_mean,), (128,), dtype="float32")
+            lv112 = R.call_tir(multiply6, (lv111, lv105), (128,), dtype="float32")
+            lv113 = R.call_tir(add9, (lv112, stage2_unit1_bn2_beta), (128,), dtype="float32")
+            lv114 = R.call_tir(expand_dims4, (lv113,), (128, 1, 1), dtype="float32")
+            lv115 = R.call_tir(expand_dims6, (lv114,), (1, 128, 1, 1), dtype="float32")
+            lv116 = R.call_tir(add10, (lv110, lv115), (1, 128, 28, 28), dtype="float32")
+            lv117 = R.call_tir(relu2, (lv116,), (1, 128, 28, 28), dtype="float32")
+            lv118 = R.call_tir(conv2d4, (lv117, stage2_unit1_conv2_weight), (1, 128, 28, 28), dtype="float32")
+            lv119 = R.call_tir(conv2d5, (lv102, stage2_unit1_sc_weight), (1, 128, 28, 28), dtype="float32")
+            lv120 = R.call_tir(add11, (lv118, lv119), (1, 128, 28, 28), dtype="float32")
+            lv121 = R.call_tir(add8, (stage2_unit2_bn1_moving_var, 2e-05), (128,), dtype="float32")
+            lv122 = R.call_tir(rsqrt2, (lv121,), (128,), dtype="float32")
+            lv123 = R.call_tir(multiply6, (lv122, stage2_unit2_bn1_gamma), (128,), dtype="float32")
+            lv124 = R.call_tir(expand_dims4, (lv123,), (128, 1, 1), dtype="float32")
+            lv125 = R.call_tir(expand_dims6, (lv124,), (1, 128, 1, 1), dtype="float32")
+            lv126 = R.call_tir(multiply8, (lv120, lv125), (1, 128, 28, 28), dtype="float32")
+            lv127 = R.call_tir(negative2, (stage2_unit2_bn1_moving_mean,), (128,), dtype="float32")
+            lv128 = R.call_tir(multiply6, (lv127, lv123), (128,), dtype="float32")
+            lv129 = R.call_tir(add9, (lv128, stage2_unit2_bn1_beta), (128,), dtype="float32")
+            lv130 = R.call_tir(expand_dims4, (lv129,), (128, 1, 1), dtype="float32")
+            lv131 = R.call_tir(expand_dims6, (lv130,), (1, 128, 1, 1), dtype="float32")
+            lv132 = R.call_tir(add10, (lv126, lv131), (1, 128, 28, 28), dtype="float32")
+            lv133 = R.call_tir(relu2, (lv132,), (1, 128, 28, 28), dtype="float32")
+            lv134 = R.call_tir(add8, (stage2_unit2_bn2_moving_var, 2e-05), (128,), dtype="float32")
+            lv135 = R.call_tir(rsqrt2, (lv134,), (128,), dtype="float32")
+            lv136 = R.call_tir(multiply6, (lv135, stage2_unit2_bn2_gamma), (128,), dtype="float32")
+            lv137 = R.call_tir(expand_dims4, (lv136,), (128, 1, 1), dtype="float32")
+            lv138 = R.call_tir(squeeze2, (lv137,), (128,), dtype="float32")
+            lv139 = R.call_tir(expand_dims5, (lv138,), (128, 1, 1, 1), dtype="float32")
+            lv140 = R.call_tir(multiply9, (stage2_unit2_conv1_weight, lv139), (128, 128, 3, 3), dtype="float32")
+            lv141 = R.call_tir(conv2d4, (lv133, lv140), (1, 128, 28, 28), dtype="float32")
+            lv142 = R.call_tir(negative2, (stage2_unit2_bn2_moving_mean,), (128,), dtype="float32")
+            lv143 = R.call_tir(multiply6, (lv142, lv136), (128,), dtype="float32")
+            lv144 = R.call_tir(add9, (lv143, stage2_unit2_bn2_beta), (128,), dtype="float32")
+            lv145 = R.call_tir(expand_dims4, (lv144,), (128, 1, 1), dtype="float32")
+            lv146 = R.call_tir(expand_dims6, (lv145,), (1, 128, 1, 1), dtype="float32")
+            lv147 = R.call_tir(add10, (lv141, lv146), (1, 128, 28, 28), dtype="float32")
+            lv148 = R.call_tir(relu2, (lv147,), (1, 128, 28, 28), dtype="float32")
+            lv149 = R.call_tir(conv2d4, (lv148, stage2_unit2_conv2_weight), (1, 128, 28, 28), dtype="float32")
+            lv150 = R.call_tir(add11, (lv149, lv120), (1, 128, 28, 28), dtype="float32")
+            lv151 = R.call_tir(add8, (stage3_unit1_bn1_moving_var, 2e-05), (128,), dtype="float32")
+            lv152 = R.call_tir(rsqrt2, (lv151,), (128,), dtype="float32")
+            lv153 = R.call_tir(multiply6, (lv152, stage3_unit1_bn1_gamma), (128,), dtype="float32")
+            lv154 = R.call_tir(expand_dims4, (lv153,), (128, 1, 1), dtype="float32")
+            lv155 = R.call_tir(expand_dims6, (lv154,), (1, 128, 1, 1), dtype="float32")
+            lv156 = R.call_tir(multiply8, (lv150, lv155), (1, 128, 28, 28), dtype="float32")
+            lv157 = R.call_tir(negative2, (stage3_unit1_bn1_moving_mean,), (128,), dtype="float32")
+            lv158 = R.call_tir(multiply6, (lv157, lv153), (128,), dtype="float32")
+            lv159 = R.call_tir(add9, (lv158, stage3_unit1_bn1_beta), (128,), dtype="float32")
+            lv160 = R.call_tir(expand_dims4, (lv159,), (128, 1, 1), dtype="float32")
+            lv161 = R.call_tir(expand_dims6, (lv160,), (1, 128, 1, 1), dtype="float32")
+            lv162 = R.call_tir(add10, (lv156, lv161), (1, 128, 28, 28), dtype="float32")
+            lv163 = R.call_tir(relu2, (lv162,), (1, 128, 28, 28), dtype="float32")
+            lv164 = R.call_tir(add12, (stage3_unit1_bn2_moving_var, 2e-05), (256,), dtype="float32")
+            lv165 = R.call_tir(rsqrt3, (lv164,), (256,), dtype="float32")
+            lv166 = R.call_tir(multiply10, (lv165, stage3_unit1_bn2_gamma), (256,), dtype="float32")
+            lv167 = R.call_tir(expand_dims7, (lv166,), (256, 1, 1), dtype="float32")
+            lv168 = R.call_tir(squeeze3, (lv167,), (256,), dtype="float32")
+            lv169 = R.call_tir(expand_dims8, (lv168,), (256, 1, 1, 1), dtype="float32")
+            lv170 = R.call_tir(multiply11, (stage3_unit1_conv1_weight, lv169), (256, 128, 3, 3), dtype="float32")
+            lv171 = R.call_tir(conv2d6, (lv163, lv170), (1, 256, 14, 14), dtype="float32")
+            lv172 = R.call_tir(negative3, (stage3_unit1_bn2_moving_mean,), (256,), dtype="float32")
+            lv173 = R.call_tir(multiply10, (lv172, lv166), (256,), dtype="float32")
+            lv174 = R.call_tir(add13, (lv173, stage3_unit1_bn2_beta), (256,), dtype="float32")
+            lv175 = R.call_tir(expand_dims7, (lv174,), (256, 1, 1), dtype="float32")
+            lv176 = R.call_tir(expand_dims9, (lv175,), (1, 256, 1, 1), dtype="float32")
+            lv177 = R.call_tir(add14, (lv171, lv176), (1, 256, 14, 14), dtype="float32")
+            lv178 = R.call_tir(relu3, (lv177,), (1, 256, 14, 14), dtype="float32")
+            lv179 = R.call_tir(conv2d7, (lv178, stage3_unit1_conv2_weight), (1, 256, 14, 14), dtype="float32")
+            lv180 = R.call_tir(conv2d8, (lv163, stage3_unit1_sc_weight), (1, 256, 14, 14), dtype="float32")
+            lv181 = R.call_tir(add15, (lv179, lv180), (1, 256, 14, 14), dtype="float32")
+            lv182 = R.call_tir(add12, (stage3_unit2_bn1_moving_var, 2e-05), (256,), dtype="float32")
+            lv183 = R.call_tir(rsqrt3, (lv182,), (256,), dtype="float32")
+            lv184 = R.call_tir(multiply10, (lv183, stage3_unit2_bn1_gamma), (256,), dtype="float32")
+            lv185 = R.call_tir(expand_dims7, (lv184,), (256, 1, 1), dtype="float32")
+            lv186 = R.call_tir(expand_dims9, (lv185,), (1, 256, 1, 1), dtype="float32")
+            lv187 = R.call_tir(multiply12, (lv181, lv186), (1, 256, 14, 14), dtype="float32")
+            lv188 = R.call_tir(negative3, (stage3_unit2_bn1_moving_mean,), (256,), dtype="float32")
+            lv189 = R.call_tir(multiply10, (lv188, lv184), (256,), dtype="float32")
+            lv190 = R.call_tir(add13, (lv189, stage3_unit2_bn1_beta), (256,), dtype="float32")
+            lv191 = R.call_tir(expand_dims7, (lv190,), (256, 1, 1), dtype="float32")
+            lv192 = R.call_tir(expand_dims9, (lv191,), (1, 256, 1, 1), dtype="float32")
+            lv193 = R.call_tir(add14, (lv187, lv192), (1, 256, 14, 14), dtype="float32")
+            lv194 = R.call_tir(relu3, (lv193,), (1, 256, 14, 14), dtype="float32")
+            lv195 = R.call_tir(add12, (stage3_unit2_bn2_moving_var, 2e-05), (256,), dtype="float32")
+            lv196 = R.call_tir(rsqrt3, (lv195,), (256,), dtype="float32")
+            lv197 = R.call_tir(multiply10, (lv196, stage3_unit2_bn2_gamma), (256,), dtype="float32")
+            lv198 = R.call_tir(expand_dims7, (lv197,), (256, 1, 1), dtype="float32")
+            lv199 = R.call_tir(squeeze3, (lv198,), (256,), dtype="float32")
+            lv200 = R.call_tir(expand_dims8, (lv199,), (256, 1, 1, 1), dtype="float32")
+            lv201 = R.call_tir(multiply13, (stage3_unit2_conv1_weight, lv200), (256, 256, 3, 3), dtype="float32")
+            lv202 = R.call_tir(conv2d7, (lv194, lv201), (1, 256, 14, 14), dtype="float32")
+            lv203 = R.call_tir(negative3, (stage3_unit2_bn2_moving_mean,), (256,), dtype="float32")
+            lv204 = R.call_tir(multiply10, (lv203, lv197), (256,), dtype="float32")
+            lv205 = R.call_tir(add13, (lv204, stage3_unit2_bn2_beta), (256,), dtype="float32")
+            lv206 = R.call_tir(expand_dims7, (lv205,), (256, 1, 1), dtype="float32")
+            lv207 = R.call_tir(expand_dims9, (lv206,), (1, 256, 1, 1), dtype="float32")
+            lv208 = R.call_tir(add14, (lv202, lv207), (1, 256, 14, 14), dtype="float32")
+            lv209 = R.call_tir(relu3, (lv208,), (1, 256, 14, 14), dtype="float32")
+            lv210 = R.call_tir(conv2d7, (lv209, stage3_unit2_conv2_weight), (1, 256, 14, 14), dtype="float32")
+            lv211 = R.call_tir(add15, (lv210, lv181), (1, 256, 14, 14), dtype="float32")
+            lv212 = R.call_tir(add12, (stage4_unit1_bn1_moving_var, 2e-05), (256,), dtype="float32")
+            lv213 = R.call_tir(rsqrt3, (lv212,), (256,), dtype="float32")
+            lv214 = R.call_tir(multiply10, (lv213, stage4_unit1_bn1_gamma), (256,), dtype="float32")
+            lv215 = R.call_tir(expand_dims7, (lv214,), (256, 1, 1), dtype="float32")
+            lv216 = R.call_tir(expand_dims9, (lv215,), (1, 256, 1, 1), dtype="float32")
+            lv217 = R.call_tir(multiply12, (lv211, lv216), (1, 256, 14, 14), dtype="float32")
+            lv218 = R.call_tir(negative3, (stage4_unit1_bn1_moving_mean,), (256,), dtype="float32")
+            lv219 = R.call_tir(multiply10, (lv218, lv214), (256,), dtype="float32")
+            lv220 = R.call_tir(add13, (lv219, stage4_unit1_bn1_beta), (256,), dtype="float32")
+            lv221 = R.call_tir(expand_dims7, (lv220,), (256, 1, 1), dtype="float32")
+            lv222 = R.call_tir(expand_dims9, (lv221,), (1, 256, 1, 1), dtype="float32")
+            lv223 = R.call_tir(add14, (lv217, lv222), (1, 256, 14, 14), dtype="float32")
+            lv224 = R.call_tir(relu3, (lv223,), (1, 256, 14, 14), dtype="float32")
+            lv225 = R.call_tir(add16, (stage4_unit1_bn2_moving_var, 2e-05), (512,), dtype="float32")
+            lv226 = R.call_tir(rsqrt4, (lv225,), (512,), dtype="float32")
+            lv227 = R.call_tir(multiply14, (lv226, stage4_unit1_bn2_gamma), (512,), dtype="float32")
+            lv228 = R.call_tir(expand_dims10, (lv227,), (512, 1, 1), dtype="float32")
+            lv229 = R.call_tir(squeeze4, (lv228,), (512,), dtype="float32")
+            lv230 = R.call_tir(expand_dims11, (lv229,), (512, 1, 1, 1), dtype="float32")
+            lv231 = R.call_tir(multiply15, (stage4_unit1_conv1_weight, lv230), (512, 256, 3, 3), dtype="float32")
+            lv232 = R.call_tir(conv2d9, (lv224, lv231), (1, 512, 7, 7), dtype="float32")
+            lv233 = R.call_tir(negative4, (stage4_unit1_bn2_moving_mean,), (512,), dtype="float32")
+            lv234 = R.call_tir(multiply14, (lv233, lv227), (512,), dtype="float32")
+            lv235 = R.call_tir(add17, (lv234, stage4_unit1_bn2_beta), (512,), dtype="float32")
+            lv236 = R.call_tir(expand_dims10, (lv235,), (512, 1, 1), dtype="float32")
+            lv237 = R.call_tir(expand_dims12, (lv236,), (1, 512, 1, 1), dtype="float32")
+            lv238 = R.call_tir(add18, (lv232, lv237), (1, 512, 7, 7), dtype="float32")
+            lv239 = R.call_tir(relu4, (lv238,), (1, 512, 7, 7), dtype="float32")
+            lv240 = R.call_tir(conv2d10, (lv239, stage4_unit1_conv2_weight), (1, 512, 7, 7), dtype="float32")
+            lv241 = R.call_tir(conv2d11, (lv224, stage4_unit1_sc_weight), (1, 512, 7, 7), dtype="float32")
+            lv242 = R.call_tir(add19, (lv240, lv241), (1, 512, 7, 7), dtype="float32")
+            lv243 = R.call_tir(add16, (stage4_unit2_bn1_moving_var, 2e-05), (512,), dtype="float32")
+            lv244 = R.call_tir(rsqrt4, (lv243,), (512,), dtype="float32")
+            lv245 = R.call_tir(multiply14, (lv244, stage4_unit2_bn1_gamma), (512,), dtype="float32")
+            lv246 = R.call_tir(expand_dims10, (lv245,), (512, 1, 1), dtype="float32")
+            lv247 = R.call_tir(expand_dims12, (lv246,), (1, 512, 1, 1), dtype="float32")
+            lv248 = R.call_tir(multiply16, (lv242, lv247), (1, 512, 7, 7), dtype="float32")
+            lv249 = R.call_tir(negative4, (stage4_unit2_bn1_moving_mean,), (512,), dtype="float32")
+            lv250 = R.call_tir(multiply14, (lv249, lv245), (512,), dtype="float32")
+            lv251 = R.call_tir(add17, (lv250, stage4_unit2_bn1_beta), (512,), dtype="float32")
+            lv252 = R.call_tir(expand_dims10, (lv251,), (512, 1, 1), dtype="float32")
+            lv253 = R.call_tir(expand_dims12, (lv252,), (1, 512, 1, 1), dtype="float32")
+            lv254 = R.call_tir(add18, (lv248, lv253), (1, 512, 7, 7), dtype="float32")
+            lv255 = R.call_tir(relu4, (lv254,), (1, 512, 7, 7), dtype="float32")
+            lv256 = R.call_tir(add16, (stage4_unit2_bn2_moving_var, 2e-05), (512,), dtype="float32")
+            lv257 = R.call_tir(rsqrt4, (lv256,), (512,), dtype="float32")
+            lv258 = R.call_tir(multiply14, (lv257, stage4_unit2_bn2_gamma), (512,), dtype="float32")
+            lv259 = R.call_tir(expand_dims10, (lv258,), (512, 1, 1), dtype="float32")
+            lv260 = R.call_tir(squeeze4, (lv259,), (512,), dtype="float32")
+            lv261 = R.call_tir(expand_dims11, (lv260,), (512, 1, 1, 1), dtype="float32")
+            lv262 = R.call_tir(multiply17, (stage4_unit2_conv1_weight, lv261), (512, 512, 3, 3), dtype="float32")
+            lv263 = R.call_tir(conv2d10, (lv255, lv262), (1, 512, 7, 7), dtype="float32")
+            lv264 = R.call_tir(negative4, (stage4_unit2_bn2_moving_mean,), (512,), dtype="float32")
+            lv265 = R.call_tir(multiply14, (lv264, lv258), (512,), dtype="float32")
+            lv266 = R.call_tir(add17, (lv265, stage4_unit2_bn2_beta), (512,), dtype="float32")
+            lv267 = R.call_tir(expand_dims10, (lv266,), (512, 1, 1), dtype="float32")
+            lv268 = R.call_tir(expand_dims12, (lv267,), (1, 512, 1, 1), dtype="float32")
+            lv269 = R.call_tir(add18, (lv263, lv268), (1, 512, 7, 7), dtype="float32")
+            lv270 = R.call_tir(relu4, (lv269,), (1, 512, 7, 7), dtype="float32")
+            lv271 = R.call_tir(conv2d10, (lv270, stage4_unit2_conv2_weight), (1, 512, 7, 7), dtype="float32")
+            lv272 = R.call_tir(add19, (lv271, lv242), (1, 512, 7, 7), dtype="float32")
+            lv273 = R.call_tir(add16, (bn1_moving_var, 2e-05), (512,), dtype="float32")
+            lv274 = R.call_tir(rsqrt4, (lv273,), (512,), dtype="float32")
+            lv275 = R.call_tir(multiply14, (lv274, bn1_gamma), (512,), dtype="float32")
+            lv276 = R.call_tir(expand_dims10, (lv275,), (512, 1, 1), dtype="float32")
+            lv277 = R.call_tir(expand_dims12, (lv276,), (1, 512, 1, 1), dtype="float32")
+            lv278 = R.call_tir(multiply16, (lv272, lv277), (1, 512, 7, 7), dtype="float32")
+            lv279 = R.call_tir(negative4, (bn1_moving_mean,), (512,), dtype="float32")
+            lv280 = R.call_tir(multiply14, (lv279, lv275), (512,), dtype="float32")
+            lv281 = R.call_tir(add17, (lv280, bn1_beta), (512,), dtype="float32")
+            lv282 = R.call_tir(expand_dims10, (lv281,), (512, 1, 1), dtype="float32")
+            lv283 = R.call_tir(expand_dims12, (lv282,), (1, 512, 1, 1), dtype="float32")
+            lv284 = R.call_tir(add18, (lv278, lv283), (1, 512, 7, 7), dtype="float32")
+            lv285 = R.call_tir(relu4, (lv284,), (1, 512, 7, 7), dtype="float32")
+            lv286 = R.call_tir(global_avg_pool2d, (lv285,), (1, 512, 1, 1), dtype="float32")
+            lv287 = R.call_tir(batch_flatten, (lv286,), (1, 512), dtype="float32")
+            lv288 = R.call_tir(dense, (lv287, fc1_weight), (1, 1000), dtype="float32")
+            lv289 = R.call_tir(expand_dims13, (fc1_bias,), (1, 1000), dtype="float32")
+            lv290 = R.call_tir(add20, (lv288, lv289), (1, 1000), dtype="float32")
+            lv291 = R.call_tir(softmax, (lv290,), (1, 1000), dtype="float32")
+            gv: R.Tensor((1, 1000), dtype="float32") = lv291
+            R.output(gv)
+        return gv
+        
+    @T.prim_func
+    def softmax(rxplaceholder: T.Buffer[(T.int64(1), T.int64(1000)), "float32"], T_softmax_norm: T.Buffer[(T.int64(1), T.int64(1000)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        T_softmax_maxelem = T.alloc_buffer([T.int64(1)], dtype="float32")
+        T_softmax_exp = T.alloc_buffer([T.int64(1), T.int64(1000)], dtype="float32")
+        T_softmax_expsum = T.alloc_buffer([T.int64(1)], dtype="float32")
+        for i0, i1 in T.grid(T.int64(1), T.int64(1000)):
+            with T.block("T_softmax_maxelem"):
+                i0_1, k = T.axis.remap("SR", [i0, i1])
+                T.reads(rxplaceholder[i0_1, k])
+                T.writes(T_softmax_maxelem[i0_1])
+                with T.init():
+                    T_softmax_maxelem[i0_1] = T.float32(-3.4028234663852886e+38)
+                T_softmax_maxelem[i0_1] = T.max(T_softmax_maxelem[i0_1], rxplaceholder[i0_1, k])
+        for i0, i1 in T.grid(T.int64(1), T.int64(1000)):
+            with T.block("T_softmax_exp"):
+                i0_2, i1_1 = T.axis.remap("SS", [i0, i1])
+                T.reads(rxplaceholder[i0_2, i1_1], T_softmax_maxelem[i0_2])
+                T.writes(T_softmax_exp[i0_2, i1_1])
+                T_softmax_exp[i0_2, i1_1] = T.exp(rxplaceholder[i0_2, i1_1] - T_softmax_maxelem[i0_2], dtype="float32")
+        for i0_3, i1 in T.grid(T.int64(1), T.int64(1000)):
+            with T.block("T_softmax_expsum"):
+                i0_4, k = T.axis.remap("SR", [i0_3, i1])
+                T.reads(T_softmax_exp[i0_4, k])
+                T.writes(T_softmax_expsum[i0_4])
+                with T.init():
+                    T_softmax_expsum[i0_4] = T.float32(0)
+                T_softmax_expsum[i0_4] = T_softmax_expsum[i0_4] + T_softmax_exp[i0_4, k]
+        for i0_5, i1 in T.grid(T.int64(1), T.int64(1000)):
+            with T.block("T_softmax_norm"):
+                i0_6, i1_2 = T.axis.remap("SS", [i0_5, i1])
+                T.reads(T_softmax_exp[i0_6, i1_2], T_softmax_expsum[i0_6])
+                T.writes(T_softmax_norm[i0_6, i1_2])
+                T.block_attr({"axis":1})
+                T_softmax_norm[i0_6, i1_2] = T_softmax_exp[i0_6, i1_2] / T_softmax_expsum[i0_6]
+    
+    @T.prim_func
+    def multiply13(rxplaceholder: T.Buffer[(T.int64(256), T.int64(256), T.int64(3), T.int64(3)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(256), T.int64(1), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(256), T.int64(256), T.int64(3), T.int64(3)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(256), T.int64(256), T.int64(3), T.int64(3)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, T.int64(0), T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def expand_dims2(rxplaceholder: T.Buffer[T.int64(64), "float32"], T_expand_dims: T.Buffer[(T.int64(64), T.int64(1), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(64), T.int64(1), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def add11(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, ax2, ax3])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, ax2, ax3]
+    
+    @T.prim_func
+    def conv2d8(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(256), T.int64(128), T.int64(1), T.int64(1)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(256), T.int64(14), T.int64(14)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(64), T.int64(32), T.int64(1), T.int64(1), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(64), T.int64(32), T.int64(1), T.int64(1), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(64), T.int64(14), T.int64(14), T.int64(4), T.int64(128), T.int64(1), T.int64(1)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_vec[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_vec[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(256), T.int64(14), T.int64(14)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
+    @T.prim_func
+    def add8(rxplaceholder: T.Buffer[T.int64(128), "float32"], rxplaceholder_1: T.Buffer[(), "float32"], T_add: T.Buffer[T.int64(128), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(128)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(128), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[()])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[()]
+    
+    @T.prim_func
+    def expand_dims3(rxplaceholder: T.Buffer[(T.int64(64), T.int64(1), T.int64(1)), "float32"], T_expand_dims: T.Buffer[(T.int64(1), T.int64(64), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax1, ax2, ax3])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax1, ax2, ax3]
+    
+    @T.prim_func
+    def negative3(rxplaceholder: T.Buffer[T.int64(256), "float32"], T_negative: T.Buffer[T.int64(256), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(256)):
+            with T.block("T_negative"):
+                ax0 = T.axis.spatial(T.int64(256), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_negative[ax0])
+                T_negative[ax0] = T.float32(0) - rxplaceholder[ax0]
+    
+    @T.prim_func
+    def add1(rxplaceholder: T.Buffer[T.int64(3), "float32"], rxplaceholder_1: T.Buffer[T.int64(3), "float32"], T_add: T.Buffer[T.int64(3), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(3)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(3), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def add10(rxplaceholder: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(128), T.int64(1), T.int64(1)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def squeeze2(rxplaceholder: T.Buffer[(T.int64(128), T.int64(1), T.int64(1)), "float32"], T_squeeze: T.Buffer[T.int64(128), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(128)):
+            with T.block("T_squeeze"):
+                ax0 = T.axis.spatial(T.int64(128), i0)
+                T.reads(rxplaceholder[ax0, T.int64(0), T.int64(0)])
+                T.writes(T_squeeze[ax0])
+                T_squeeze[ax0] = rxplaceholder[ax0, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply4(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(64), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def expand_dims7(rxplaceholder: T.Buffer[T.int64(256), "float32"], T_expand_dims: T.Buffer[(T.int64(256), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2 in T.grid(T.int64(256), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2 = T.axis.remap("SSS", [i0, i1, i2])
+                T.reads(rxplaceholder[ax0])
+                T.writes(T_expand_dims[ax0, ax1, ax2])
+                T_expand_dims[ax0, ax1, ax2] = rxplaceholder[ax0]
+    
+    @T.prim_func
+    def squeeze4(rxplaceholder: T.Buffer[(T.int64(512), T.int64(1), T.int64(1)), "float32"], T_squeeze: T.Buffer[T.int64(512), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(512)):
+            with T.block("T_squeeze"):
+                ax0 = T.axis.spatial(T.int64(512), i0)
+                T.reads(rxplaceholder[ax0, T.int64(0), T.int64(0)])
+                T.writes(T_squeeze[ax0])
+                T_squeeze[ax0] = rxplaceholder[ax0, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def multiply3(rxplaceholder: T.Buffer[(T.int64(64), T.int64(3), T.int64(7), T.int64(7)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(3), T.int64(1), T.int64(1)), "float32"], T_multiply: T.Buffer[(T.int64(64), T.int64(3), T.int64(7), T.int64(7)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(64), T.int64(3), T.int64(7), T.int64(7)):
+            with T.block("T_multiply"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax1, T.int64(0), T.int64(0)])
+                T.writes(T_multiply[ax0, ax1, ax2, ax3])
+                T_multiply[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] * rxplaceholder_1[ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def rsqrt1(rxplaceholder: T.Buffer[T.int64(64), "float32"], tensor: T.Buffer[T.int64(64), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(64)):
+            with T.block("tensor"):
+                ax0 = T.axis.spatial(T.int64(64), i0)
+                T.reads(rxplaceholder[ax0])
+                T.writes(tensor[ax0])
+                tensor[ax0] = T.float32(1) / T.sqrt(rxplaceholder[ax0], dtype="float32")
+    
+    @T.prim_func
+    def add6(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(1), T.int64(64), T.int64(1), T.int64(1)), "float32"], T_add: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(64), T.int64(56), T.int64(56)):
+            with T.block("T_add"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax0, ax1, ax2, ax3], rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)])
+                T.writes(T_add[ax0, ax1, ax2, ax3])
+                T_add[ax0, ax1, ax2, ax3] = rxplaceholder[ax0, ax1, ax2, ax3] + rxplaceholder_1[ax0, ax1, T.int64(0), T.int64(0)]
+    
+    @T.prim_func
+    def add17(rxplaceholder: T.Buffer[T.int64(512), "float32"], rxplaceholder_1: T.Buffer[T.int64(512), "float32"], T_add: T.Buffer[T.int64(512), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0 in T.serial(T.int64(512)):
+            with T.block("T_add"):
+                ax0 = T.axis.spatial(T.int64(512), i0)
+                T.reads(rxplaceholder[ax0], rxplaceholder_1[ax0])
+                T.writes(T_add[ax0])
+                T_add[ax0] = rxplaceholder[ax0] + rxplaceholder_1[ax0]
+    
+    @T.prim_func
+    def expand_dims12(rxplaceholder: T.Buffer[(T.int64(512), T.int64(1), T.int64(1)), "float32"], T_expand_dims: T.Buffer[(T.int64(1), T.int64(512), T.int64(1), T.int64(1)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(512), T.int64(1), T.int64(1)):
+            with T.block("T_expand_dims"):
+                ax0, ax1, ax2, ax3 = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(rxplaceholder[ax1, ax2, ax3])
+                T.writes(T_expand_dims[ax0, ax1, ax2, ax3])
+                T_expand_dims[ax0, ax1, ax2, ax3] = rxplaceholder[ax1, ax2, ax3]
+    
+    @T.prim_func
+    def conv2d3(rxplaceholder: T.Buffer[(T.int64(1), T.int64(64), T.int64(56), T.int64(56)), "float32"], rxplaceholder_1: T.Buffer[(T.int64(128), T.int64(64), T.int64(3), T.int64(3)), "float32"], output_unpack: T.Buffer[(T.int64(1), T.int64(128), T.int64(28), T.int64(28)), "float32"]):
+        # function attr dict
+        T.func_attr({"tir.noalias": True})
+        # body
+        # with T.block("root")
+        data_vec = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)], dtype="float32")
+        data_pad = T.alloc_buffer([T.int64(1), T.int64(16), T.int64(58), T.int64(58), T.int64(4)], dtype="float32")
+        kernel_vec = T.alloc_buffer([T.int64(32), T.int64(16), T.int64(3), T.int64(3), T.int64(4), T.int64(4)], dtype="float32")
+        conv2d_NCHWc = T.alloc_buffer([T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4)], dtype="float32")
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(16), T.int64(56), T.int64(56), T.int64(4)):
+            with T.block("data_vec"):
+                bs, c, h, w, vc = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(rxplaceholder[bs, c * T.int64(4) + vc, h, w])
+                T.writes(data_vec[bs, c, h, w, vc])
+                data_vec[bs, c, h, w, vc] = rxplaceholder[bs, c * T.int64(4) + vc, h, w]
+        for i0, i1, i2, i3, i4 in T.grid(T.int64(1), T.int64(16), T.int64(58), T.int64(58), T.int64(4)):
+            with T.block("data_pad"):
+                i0_1, i1_1, i2_1, i3_1, i4_1 = T.axis.remap("SSSSS", [i0, i1, i2, i3, i4])
+                T.reads(data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1])
+                T.writes(data_pad[i0_1, i1_1, i2_1, i3_1, i4_1])
+                data_pad[i0_1, i1_1, i2_1, i3_1, i4_1] = T.if_then_else(T.int64(1) <= i2_1 and i2_1 < T.int64(57) and T.int64(1) <= i3_1 and i3_1 < T.int64(57), data_vec[i0_1, i1_1, i2_1 - T.int64(1), i3_1 - T.int64(1), i4_1], T.float32(0), dtype="float32")
+        for i0, i1, i2, i3, i4, i5 in T.grid(T.int64(32), T.int64(16), T.int64(3), T.int64(3), T.int64(4), T.int64(4)):
+            with T.block("kernel_vec"):
+                occ, icc, k_h, k_w, icb, ocb = T.axis.remap("SSSSSS", [i0, i1, i2, i3, i4, i5])
+                T.reads(rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w])
+                T.writes(kernel_vec[occ, icc, k_h, k_w, icb, ocb])
+                kernel_vec[occ, icc, k_h, k_w, icb, ocb] = rxplaceholder_1[occ * T.int64(4) + ocb, icc * T.int64(4) + icb, k_h, k_w]
+        for i0, i1, i2, i3, i4, i5, i6, i7 in T.grid(T.int64(1), T.int64(32), T.int64(28), T.int64(28), T.int64(4), T.int64(64), T.int64(3), T.int64(3)):
+            with T.block("conv2d_NCHWc"):
+                n, oc_chunk, oh, ow, oc_block, ic, kh, kw = T.axis.remap("SSSSSRRR", [i0, i1, i2, i3, i4, i5, i6, i7])
+                T.reads(data_pad[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)], kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block])
+                T.writes(conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block])
+                with T.init():
+                    conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = T.float32(0)
+                conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] = conv2d_NCHWc[n, oc_chunk, oh, ow, oc_block] + data_pad[n, ic // T.int64(4), oh * T.int64(2) + kh, ow * T.int64(2) + kw, ic % T.int64(4)] * kernel_vec[oc_chunk, ic // T.int64(4), kh, kw, ic % T.int64(4), oc_block]
+        for i0, i1, i2, i3 in T.grid(T.int64(1), T.int64(128), T.int64(28), T.int64(28)):
+            with T.block("output_unpack"):
+                n, c, h, w = T.axis.remap("SSSS", [i0, i1, i2, i3])
+                T.reads(conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)])
+                T.writes(output_unpack[n, c, h, w])
+                output_unpack[n, c, h, w] = conv2d_NCHWc[n, c // T.int64(4), h, w, c % T.int64(4)]
+    
