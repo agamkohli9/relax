@@ -2,10 +2,6 @@ import sys, inspect
 import tvm
 from tvm.script import relax as R
 
-class TestClass:
-    def __init__():
-        print("ok")
-
 @tvm.script.ir_module
 class ModuleBasic:
     @R.function
@@ -40,6 +36,14 @@ class ModuleMultPowerOfTwo:
         a = R.const(50)
         b = R.const(32) # note this is a power of 2
         c = R.multiply(a, b)
+        return c
+
+@tvm.script.ir_module
+class ModuleMultPowerOfTwo:
+    @R.function
+    def main(a):
+        b = R.const(32) # note this is a power of 2
+        c = R.multiply(a, b) # 'a' is an arbitrary input (scaler, tensor, etc.)
         return c
 
 # TODO: Resolve below error

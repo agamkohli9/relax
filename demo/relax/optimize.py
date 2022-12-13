@@ -12,28 +12,28 @@ from tvm.script import tir as T, relax as R
 
 from logger import bcolors, log
 
-OUTPUT_DIR = "relaxir"
-
 def get_modules():
     mods = []
-    for name, cls in inspect.getmembers(importlib.import_module("modules")):
+    for name, cls in inspect.getmembers(importlib.import_module("relax.modules")):
         if name.startswith("Module"):
             mods.append((name, cls))
     return mods
 
 
-def save_model(model, filename):
-    filepath = os.path.join(OUTPUT_DIR, filename)
+def save_model(model, filepath):
     log(f"Saving model to {filepath}", bcolors.OKCYAN)
     with open(filepath, "w") as f:
         print(model, file=f)
 
 
-def optimize_and_save_model(name, mod_in):
+def optimize_and_save_model(output_dir, mod_name, mod_in):
+    
+    filepath_raw = os.path.join(output_dir, f'{mod_name}-raw.relax')
+    filepath_opt = os.path.join(output_dir, f'{mod_name}-opt.relax')
 
     # Save original for reference
     mod = mod_in
-    save_model(mod, f'{name}-raw.relax')
+    save_model(mod, filepath_raw)
 
     # Optimize
     mod_opt = mod
@@ -41,16 +41,5 @@ def optimize_and_save_model(name, mod_in):
         mod_opt = relax.transform.FoldConstant()(mod_opt)
     
     # Save 
-    save_model(mod_opt, f'{name}-opt.relax')
+    save_model(mod_opt, filepath_opt)
     log("Done", bcolors.OKGREEN)
-
-
-def main():
-    modules = get_modules()
-
-    for mod in modules:
-        print("compiling model ", mod[0])
-        optimize_and_save_model(mod[0], mod[1])
-
-if __name__ == '__main__':
-    main()
