@@ -51,6 +51,8 @@ We recommend using a virtual environment. See the [official documentation here](
 
 Create a virtual environment and install dependencies.
 ```bash
+cd ./demo
+
 # Create and activate a virtual environment
 python -m venv env
 source env/bin/activate
