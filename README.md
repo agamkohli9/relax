@@ -15,8 +15,8 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-<img src=https://raw.githubusercontent.com/apache/tvm-site/main/images/logo/tvm-logo-small.png width=128/> Open Deep Learning Compiler Stack
-==============================================
+# <img src=https://raw.githubusercontent.com/apache/tvm-site/main/images/logo/tvm-logo-small.png width=128/> Open Deep Learning Compiler Stack
+
 [Documentation](https://tvm.apache.org/docs) |
 [Contributors](CONTRIBUTORS.md) |
 [Community](https://tvm.apache.org/community) |
@@ -29,27 +29,53 @@ Apache TVM is a compiler stack for deep learning systems. It is designed to clos
 productivity-focused deep learning frameworks, and the performance- and efficiency-focused hardware backends.
 TVM works with deep learning frameworks to provide end to end compilation to different backends.
 
-*(See the [original README](https://github.com/apache/tvm/blob/main/README.md) for more information)*
+_(See the [original README](https://github.com/apache/tvm/blob/main/README.md) for more information)_
 
 ## Setup
 
 The following instructions have been adapted from [TVM's official "Installing TVM from source" guide](https://tvm.apache.org/docs/install/from_source.html#developers-get-source-from-github)
 
+**Getting started**
+
 Start by cloning our TVM fork.
+
 ```bash
 git clone --recursive https://github.com/agamkohli9/relax
 ```
 
 Update submodules
+
 ```bash
 cd ./relax
 git submodule init
 git submodule update
 ```
 
+**Build TVM**
+
+```bash
+# Setup build directory
+mkdir build
+cp cmake/config.cmake build
+
+# Build TVM
+make -C ./build
+```
+
+**Python package setup**
+
+Update your python path to include your local build of TVM.
+
+```bash
+export TVM_HOME=/path/to/relax
+export PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
+```
+
+**Python scripting environment**
 We recommend using a virtual environment. See the [official documentation here](https://docs.python.org/3/library/venv.html).
 
 Create a virtual environment and install dependencies.
+
 ```bash
 cd ./demo
 
@@ -61,8 +87,53 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
+## Optimizing models
 
-## Optimizing a model
+For all of the following, ensure you are in the `./demo` directory with a python virtual environment active and all dependencies installed..
 
-*TODO*
+**Testing optimizations**
 
+Run an optimization pass defined in `demo/relax/optimize.py` for all
+example programs included in `demo/relax/modules.py`.
+
+```bash
+python3 ./gen_relax_ir.py
+```
+
+This produces two `.relax` files for each input (one containing the origininal, unmodified IR, and one containing the optimized IR). All generated `.relax` files are saved to `demo/relax-ir`.
+
+_Example:_
+
+<table>
+<tr>
+<th>Input</th>
+<th>Output</th>
+</tr>
+<tr>
+<td>
+
+```bash
+# ModuleBasic-raw.relax
+
+@R.function
+def foo() -> R.Tensor(None, dtype="int32", ndim=0):
+    # block 0
+    res: R.Tensor((), dtype="int32") = R.add(30, 40)
+    return res
+```
+
+</td>
+<td>
+
+```bash
+# ModuleBasic-opt.relax
+
+@R.function
+def foo() -> R.Tensor(None, dtype="int32", ndim=0):
+    # block 0
+    res: R.Tensor((), dtype="int32") = 70
+    return 70
+```
+
+</td>
+</tr>
