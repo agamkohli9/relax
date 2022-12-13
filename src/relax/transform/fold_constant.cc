@@ -204,11 +204,11 @@ class ConstantFolder : public ExprMutator {
       }
       
       if (call->op == Op::Get("relax.multiply")) {
-        return tvm::relay::MakeConstantScalar(dtype, arg[0] + arg[1]);
+        return tvm::relay::MakeConstantScalar(dtype, arg[0] * arg[1]);
       }
 
       if (call->op == Op::Get("relax.left_shift")) {
-        return tvm::relay::MakeConstantScalar(dtype, arg[0] + arg[1]);
+        return tvm::relay::MakeConstantScalar(dtype, arg[0] << arg[1]);
       }
       
       /** TODO: Implement other binary ops */
