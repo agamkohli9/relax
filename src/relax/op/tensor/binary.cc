@@ -39,33 +39,33 @@ RELAX_REGISTER_BINARY_BROADCAST_OP("multiply")
     .describe("Elementwise multiply with broadcasting")
     .set_support_level(1);
 
+RELAX_REGISTER_BINARY_BROADCAST_OP("divide")
+    .describe("Divide")
+    .set_support_level(1)
+    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::divide));
+
+RELAX_REGISTER_BINARY_BROADCAST_OP("and")
+    .describe("And")
+    .set_support_level(1)
+    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::operator&));
+
+RELAX_REGISTER_BINARY_BROADCAST_OP("or")
+    .describe("Or")
+    .set_support_level(1)
+    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::operator|));
+
+RELAX_REGISTER_BINARY_BROADCAST_OP("xor")
+    .describe("XOR")
+    .set_support_level(1)
+    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::operator^));
+
 RELAX_REGISTER_BINARY_BROADCAST_OP("left_shift")
     .describe("Left Shift")
     .set_support_level(1)
     .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::left_shift));
 
-RELAX_REGISTER_BINARY_BROADCAST_OP("or")
-    .describe("Left Shift")
-    .set_support_level(1)
-    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::operator|));
-
-RELAX_REGISTER_BINARY_BROADCAST_OP("xor")
-    .describe("Left Shift")
-    .set_support_level(1)
-    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::operator^));
-
-RELAX_REGISTER_BINARY_BROADCAST_OP("and")
-    .describe("Left Shift")
-    .set_support_level(1)
-    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::operator&));
-
-RELAX_REGISTER_BINARY_BROADCAST_OP("divide")
-    .describe("Left Shift")
-    .set_support_level(1)
-    .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::subtract));
-
 RELAX_REGISTER_BINARY_BROADCAST_OP("right_shift")
-    .describe("Left Shift")
+    .describe("Right Shift")
     .set_support_level(1)
     .set_attr<FTVMCompute>("FTVMCompute", RELAX_BINARY_COMPUTE(topi::right_shift));
 
