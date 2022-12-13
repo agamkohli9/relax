@@ -3,7 +3,7 @@ def foo() -> R.Tensor(None, dtype="int32", ndim=0):
     # block 0
     a: R.Tensor((), dtype="int32") = 50
     b: R.Tensor((), dtype="int32") = 32
-    c: R.Tensor((), dtype="int32") = 82
-    return 82
+    c: R.Tensor((), dtype="int32") = 1600
+    return 1600
     
 
