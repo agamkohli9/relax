@@ -25,14 +25,20 @@ from ..expr import Expr
 def add(lhs: Expr, rhs: Expr) -> Expr:
     return _ffi_api.add(lhs, rhs)  # type: ignore
 
-
 def multiply(lhs: Expr, rhs: Expr) -> Expr:
     return _ffi_api.multiply(lhs, rhs)  # type: ignore
 
+def divide(lhs: Expr, rhs: Expr) -> Expr:
+    return _ffi_api.divide(lhs, rhs)  # type: ignore
+
+def left_shift(lhs: Expr, rhs: Expr) -> Expr:
+    return _ffi_api.left_shift(lhs, rhs)  # type: ignore
+
+def right_shift(lhs: Expr, rhs: Expr) -> Expr:
+    return _ffi_api.right_shift(lhs, rhs)  # type: ignore
 
 def ewise_fma(e1: Expr, e2: Expr, e3: Expr) -> Expr:
     return _ffi_api.ewise_fma(e1, e2, e3)  # type: ignore
-
 
 def unique(
     data: Expr,
