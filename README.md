@@ -137,3 +137,28 @@ def foo() -> R.Tensor(None, dtype="int32", ndim=0):
 
 </td>
 </tr>
+
+
+## Project Structure
+
+```
+├── definitions.py
+├── gen_lib.py                          <- generate compiled libs for benchmarking
+├── gen_plots.py                        <- generate plots from compiled libs
+├── gen_relax_ir.py                     <- generate optimized Relax IR from inputs
+├── logger.py
+├── plot.png
+├── relax
+│   ├── __init__py
+│   ├── modules.py
+│   └── optimize.py
+├── relax-ir
+│   ├── ModuleBasic-opt.relax
+│   ├── ModuleBasic-raw.relax
+|   ...
+├── relay
+│   ├── __init__.py
+│   ├── config.py
+│   └── lib.py
+└── requirements.txt
+```
